@@ -3,207 +3,186 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard - AyosPH</title>
+    <title>Resident Dashboard | AyosPH</title>
+    
+    <!-- Fonts & Icons -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    
+    <!-- Styles -->
     <link rel="stylesheet" href="css/style.css">
     <link rel="stylesheet" href="css/dashboard.css">
 </head>
-<body class="dashboard-page">
-    <!-- Sidebar -->
-    <aside class="sidebar" id="sidebar">
-        <div class="sidebar-header">
-            <a href="index.html" class="sidebar-logo">
+<body>
+
+    <div class="dashboard-container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="logo">
                 <i class="ph ph-house-line"></i>
                 <span>AyosPH</span>
-            </a>
-        </div>
-        
-        <nav class="sidebar-menu">
-            <a href="dashboard.html" class="menu-item active">
-                <i class="ph ph-squares-four"></i>
-                <span>Dashboard</span>
-            </a>
-            <a href="#" class="menu-item" data-view="my-reports">
-                <i class="ph ph-file-text"></i>
-                <span>My Reports</span>
-            </a>
-            <a href="#" class="menu-item" data-view="new-report">
-                <i class="ph ph-plus-circle"></i>
-                <span>New Report</span>
-            </a>
-            <a href="#" class="menu-item" data-view="notifications">
-                <i class="ph ph-bell"></i>
-                <span>Notifications</span>
-            </a>
-        </nav>
-
-        <div class="sidebar-footer">
-            <div class="user-profile" id="userProfile">
-                <div class="user-avatar" id="userAvatar">JD</div>
-                <div class="user-info">
-                    <div class="user-name" id="userName">Loading...</div>
-                    <div class="user-role" id="userRole">Resident</div>
-                </div>
-                <i class="ph ph-sign-out" id="logoutBtn" style="color: var(--gray-400);"></i>
             </div>
-        </div>
-    </aside>
+            
+            <nav class="nav-menu">
+                <a href="#" class="nav-item active" data-section="overview">
+                    <i class="ph ph-squares-four"></i>
+                    <span>Overview</span>
+                </a>
+                <a href="#" class="nav-item" data-section="reports">
+                    <i class="ph ph-file-text"></i>
+                    <span>My Reports</span>
+                </a>
+                <a href="#" class="nav-item" data-section="history">
+                    <i class="ph ph-clock-counter-clockwise"></i>
+                    <span>History</span>
+                </a>
+                <a href="#" class="nav-item" data-section="settings">
+                    <i class="ph ph-gear"></i>
+                    <span>Settings</span>
+                </a>
+            </nav>
 
-    <!-- Main Content -->
-    <main class="main-content">
-        <!-- Top Bar -->
-        <header class="top-bar">
-            <div class="top-bar-left">
-                <button class="menu-toggle" id="menuToggle">
-                    <i class="ph ph-list"></i>
-                </button>
-                <h1 class="page-title" id="pageTitle">Dashboard</h1>
-            </div>
-            <div class="top-bar-right">
-                <button class="notification-btn" id="notificationBtn">
-                    <i class="ph ph-bell"></i>
-                    <span class="notification-badge hidden" id="notificationBadge"></span>
+            <div class="sidebar-footer">
+                <button id="logoutBtn" class="nav-item logout-btn">
+                    <i class="ph ph-sign-out"></i>
+                    <span>Logout</span>
                 </button>
             </div>
-        </header>
+        </aside>
 
-        <!-- Dashboard Content -->
-        <div class="dashboard-content">
-            <!-- Stats Grid -->
-            <div class="stats-grid">
-                <div class="stat-card">
-                    <div class="stat-card-header">
-                        <div>
-                            <div class="stat-card-value" id="totalReports">0</div>
-                            <div class="stat-card-label">Total Reports</div>
-                        </div>
-                        <div class="stat-card-icon primary">
-                            <i class="ph ph-file-text"></i>
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Top Header -->
+            <header class="top-header">
+                <div class="header-left">
+                    <button class="mobile-menu-btn"><i class="ph ph-list"></i></button>
+                    <h2 id="pageTitle">Overview</h2>
+                </div>
+                <div class="header-right">
+                    <button class="btn-primary" id="createReportBtn">
+                        <i class="ph ph-plus-circle"></i>
+                        <span>New Report</span>
+                    </button>
+                    <div class="user-profile">
+                        <div class="avatar" id="userAvatar">U</div>
+                        <div class="user-info">
+                            <span class="user-name" id="userName">Loading...</span>
+                            <span class="user-role" id="userRole">Resident</span>
                         </div>
                     </div>
                 </div>
-                <div class="stat-card">
-                    <div class="stat-card-header">
-                        <div>
-                            <div class="stat-card-value" id="pendingReports">0</div>
-                            <div class="stat-card-label">Pending</div>
-                        </div>
-                        <div class="stat-card-icon warning">
-                            <i class="ph ph-clock"></i>
-                        </div>
-                    </div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-card-header">
-                        <div>
-                            <div class="stat-card-value" id="inProgressReports">0</div>
-                            <div class="stat-card-label">In Progress</div>
-                        </div>
-                        <div class="stat-card-icon primary">
-                            <i class="ph ph-spinner"></i>
-                        </div>
-                    </div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-card-header">
-                        <div>
-                            <div class="stat-card-value" id="fixedReports">0</div>
-                            <div class="stat-card-label">Resolved</div>
-                        </div>
-                        <div class="stat-card-icon success">
-                            <i class="ph ph-check-circle"></i>
-                        </div>
-                    </div>
-                </div>
-            </div>
+            </header>
 
-            <!-- Recent Reports -->
-            <div class="content-card">
-                <div class="card-header">
-                    <h2 class="card-title">Recent Reports</h2>
-                    <div class="card-actions">
-                        <button class="btn btn-primary" id="newReportBtn">
-                            <i class="ph ph-plus"></i>
-                            New Report
-                        </button>
+            <!-- Dynamic Content Area -->
+            <div class="content-area">
+                
+                <!-- Overview Section -->
+                <section id="overview" class="content-section active">
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-icon blue"><i class="ph ph-file-text"></i></div>
+                            <div class="stat-details">
+                                <h3 id="totalReports">0</h3>
+                                <p>Total Reports</p>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon yellow"><i class="ph ph-clock"></i></div>
+                            <div class="stat-details">
+                                <h3 id="pendingReports">0</h3>
+                                <p>Pending</p>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon green"><i class="ph ph-check-circle"></i></div>
+                            <div class="stat-details">
+                                <h3 id="fixedReports">0</h3>
+                                <p>Resolved</p>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon red"><i class="ph ph-warning"></i></div>
+                            <div class="stat-details">
+                                <h3 id="emergencyReports">0</h3>
+                                <p>Emergencies</p>
+                            </div>
+                        </div>
                     </div>
-                </div>
-                <div class="card-body">
-                    <div class="filter-bar mb-3">
-                        <input type="text" class="form-input search-input" id="searchInput" placeholder="Search reports...">
-                        <select class="form-select filter-select" id="statusFilter">
-                            <option value="">All Statuses</option>
+
+                    <div class="recent-reports">
+                        <div class="section-header">
+                            <h3>Recent Activity</h3>
+                            <a href="#" class="view-all" data-target="reports">View All</a>
+                        </div>
+                        <div id="recentReportsList" class="reports-grid">
+                            <!-- Loaded via JS -->
+                            <div class="loading-state">Loading reports...</div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- My Reports Section -->
+                <section id="reports" class="content-section">
+                    <div class="filters-bar">
+                        <div class="search-box">
+                            <i class="ph ph-magnifying-glass"></i>
+                            <input type="text" id="searchInput" placeholder="Search reports...">
+                        </div>
+                        <select id="filterStatus">
+                            <option value="all">All Status</option>
                             <option value="Pending">Pending</option>
                             <option value="Under Review">Under Review</option>
                             <option value="In Progress">In Progress</option>
                             <option value="Fixed">Fixed</option>
                             <option value="Rejected">Rejected</option>
                         </select>
-                        <select class="form-select filter-select" id="categoryFilter">
-                            <option value="">All Categories</option>
-                            <option value="Roads">Roads</option>
-                            <option value="Garbage">Garbage</option>
-                            <option value="Drainage">Drainage</option>
-                            <option value="Flooding">Flooding</option>
-                            <option value="Street Lights">Street Lights</option>
-                            <option value="Public Safety">Public Safety</option>
-                            <option value="Infrastructure">Infrastructure</option>
-                            <option value="Others">Others</option>
-                        </select>
                     </div>
-                    <div class="report-list" id="reportList">
-                        <!-- Reports will be loaded here -->
-                        <div class="empty-state">
-                            <i class="ph ph-spinner empty-state-icon" style="animation: spin 1s linear infinite;"></i>
-                            <p class="empty-state-text">Loading reports...</p>
-                        </div>
+                    <div id="allReportsList" class="reports-list">
+                        <!-- Loaded via JS -->
                     </div>
-                </div>
-            </div>
-        </div>
-    </main>
+                </section>
 
-    <!-- New Report Modal -->
-    <div class="modal-overlay" id="newReportModal">
-        <div class="modal">
+                <!-- History Section (Placeholder) -->
+                <section id="history" class="content-section">
+                    <div class="empty-state">
+                        <i class="ph ph-clock-counter-clockwise"></i>
+                        <h3>History Archive</h3>
+                        <p>Older reports will appear here.</p>
+                    </div>
+                </section>
+
+                 <!-- Settings Section (Placeholder) -->
+                 <section id="settings" class="content-section">
+                    <div class="empty-state">
+                        <i class="ph ph-gear"></i>
+                        <h3>Settings</h3>
+                        <p>Profile settings coming soon.</p>
+                    </div>
+                </section>
+            </div>
+        </main>
+    </div>
+
+    <!-- Create Report Modal -->
+    <div id="reportModal" class="modal">
+        <div class="modal-content large">
             <div class="modal-header">
-                <h3 class="modal-title">Create New Report</h3>
-                <button class="modal-close" id="closeNewReportModal">
-                    <i class="ph ph-x"></i>
-                </button>
+                <h3>Submit New Report</h3>
+                <button class="close-modal">&times;</button>
             </div>
-            <div class="modal-body">
-                <form id="newReportForm">
-                    <div class="form-group">
-                        <label class="form-label">Issue Photo *</label>
-                        <div class="image-upload" id="imageUpload">
-                            <input type="file" id="imageInput" accept="image/*" hidden>
-                            <div id="uploadPlaceholder">
-                                <i class="ph ph-camera image-upload-icon"></i>
-                                <p class="image-upload-text">Click to upload photo</p>
-                                <p class="image-upload-hint">PNG, JPG up to 5MB</p>
-                            </div>
-                            <img id="imagePreview" class="image-upload-preview hidden" alt="Preview">
-                        </div>
+            <form id="reportForm">
+                <div class="form-grid">
+                    <div class="form-group full-width">
+                        <label>Title</label>
+                        <input type="text" id="reportTitle" required placeholder="e.g., Broken street light at Corner St.">
                     </div>
-
+                    
                     <div class="form-group">
-                        <label for="reportTitle" class="form-label">Title *</label>
-                        <input type="text" id="reportTitle" class="form-input" placeholder="Brief description of the issue" required>
-                    </div>
-
-                    <div class="form-group">
-                        <label for="reportDescription" class="form-label">Description *</label>
-                        <textarea id="reportDescription" class="form-textarea" placeholder="Provide detailed information about the issue..." required></textarea>
-                    </div>
-
-                    <div class="form-group">
-                        <label for="reportCategory" class="form-label">Category *</label>
-                        <select id="reportCategory" class="form-select" required>
-                            <option value="">Select category</option>
+                        <label>Category</label>
+                        <select id="reportCategory" required>
+                            <option value="">Select Category</option>
                             <option value="Roads">Roads</option>
                             <option value="Garbage">Garbage</option>
                             <option value="Drainage">Drainage</option>
@@ -216,9 +195,8 @@
                     </div>
 
                     <div class="form-group">
-                        <label for="reportSeverity" class="form-label">Severity *</label>
-                        <select id="reportSeverity" class="form-select" required>
-                            <option value="">Select severity</option>
+                        <label>Severity</label>
+                        <select id="reportSeverity" required>
                             <option value="Low">Low</option>
                             <option value="Medium">Medium</option>
                             <option value="High">High</option>
@@ -226,51 +204,47 @@
                         </select>
                     </div>
 
-                    <div class="form-group">
-                        <label for="reportLocation" class="form-label">Location *</label>
-                        <div style="display: flex; gap: 0.5rem;">
-                            <input type="text" id="reportLocation" class="form-input" placeholder="Enter location or use GPS" required>
-                            <button type="button" class="btn btn-outline" id="gpsBtn" title="Use my location">
-                                <i class="ph ph-crosshair"></i>
-                            </button>
+                    <div class="form-group full-width">
+                        <label>Description</label>
+                        <textarea id="reportDescription" rows="4" required placeholder="Describe the issue in detail..."></textarea>
+                    </div>
+
+                    <div class="form-group full-width">
+                        <label>Location</label>
+                        <div class="location-input-group">
+                            <input type="text" id="reportLocation" required placeholder="Enter location manually or use GPS">
+                            <button type="button" id="gpsBtn" class="btn-secondary"><i class="ph ph-crosshair"></i> Use GPS</button>
                         </div>
                     </div>
-                </form>
-            </div>
-            <div class="modal-footer">
-                <button class="btn btn-outline" id="cancelNewReport">Cancel</button>
-                <button class="btn btn-primary" id="submitReport">
-                    Submit Report
-                </button>
-            </div>
+
+                    <div class="form-group full-width">
+                        <label>Upload Photo</label>
+                        <div class="file-upload-area" id="dropZone">
+                            <i class="ph ph-image"></i>
+                            <p>Drag & drop or click to upload</p>
+                            <input type="file" id="reportImage" accept="image/*" hidden>
+                            <div id="imagePreview" class="image-preview"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn-secondary close-modal">Cancel</button>
+                    <button type="submit" class="btn-primary" id="submitReportBtn">
+                        <span>Submit Report</span>
+                        <i class="ph ph-spinner loading-spinner" style="display:none"></i>
+                    </button>
+                </div>
+            </form>
         </div>
     </div>
 
-    <!-- Report Detail Modal -->
-    <div class="modal-overlay" id="reportDetailModal">
-        <div class="modal" style="max-width: 800px;">
-            <div class="modal-header">
-                <h3 class="modal-title">Report Details</h3>
-                <button class="modal-close" id="closeReportDetailModal">
-                    <i class="ph ph-x"></i>
-                </button>
-            </div>
-            <div class="modal-body" id="reportDetailContent">
-                <!-- Report details will be loaded here -->
-            </div>
-        </div>
-    </div>
-
-    <!-- Toast Container -->
-    <div id="toast-container"></div>
-
-    <!-- Supabase JS -->
+    <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="js/supabase.js"></script>
     <script src="js/utils.js"></script>
+    <script src="js/supabase.js"></script>
     <script src="js/auth.js"></script>
     <script src="js/reports.js"></script>
-    <script src="js/notifications.js"></script>
     <script src="js/dashboard.js"></script>
 </body>
 </html>

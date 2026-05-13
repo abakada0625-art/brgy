@@ -1,448 +1,357 @@
 /**
  * AyosPH - Reports Module
- * =========================
- * Handles report creation, fetching, updating, and management.
+ * ========================
+ * Handles CRUD operations for community reports.
  */
 
-// Report categories
-const CATEGORIES = [
-    'Roads',
-    'Garbage',
-    'Drainage',
-    'Flooding',
-    'Street Lights',
-    'Public Safety',
-    'Infrastructure',
-    'Others'
-];
+let currentUser = null;
+let selectedFile = null;
 
-// Report statuses
-const STATUSES = [
-    'Pending',
-    'Under Review',
-    'In Progress',
-    'Fixed',
-    'Rejected'
-];
+// Initialize when DOM is ready
+document.addEventListener('DOMContentLoaded', async () => {
+    await initReports();
+});
 
-// Severity levels
-const SEVERITIES = [
-    'Low',
-    'Medium',
-    'High',
-    'Emergency'
-];
+async function initReports() {
+    const _supabase = getSupabase();
+    
+    // Get Current User
+    const { data: { user } } = await _supabase.auth.getUser();
+    if (!user) {
+        window.location.href = 'login.html';
+        return;
+    }
+    currentUser = user;
+
+    // Load initial data
+    await loadReports();
+    setupEventListeners();
+    setupRealtime();
+}
 
 /**
- * Create a new report
- * @param {Object} reportData - Report data
- * @returns {Promise<Object>} Created report
+ * Fetch reports for the current user
  */
-async function createReport(reportData) {
+async function loadReports(filter = 'all', search = '') {
+    const _supabase = getSupabase();
+    const listContainer = document.getElementById('allReportsList');
+    const recentContainer = document.getElementById('recentReportsList');
+    
+    if (!listContainer) return;
+
+    // Show loading
+    listContainer.innerHTML = '<div class="loading-state">Loading reports...</div>';
+
     try {
-        const { data: { user } } = await _supabase.auth.getUser();
-        if (!user) throw new Error('Not authenticated');
+        let query = _supabase
+            .from('reports')
+            .select('*')
+            .eq('reported_by', currentUser.id)
+            .order('created_at', { ascending: false });
+
+        // Apply Filters
+        if (filter !== 'all') {
+            query = query.eq('status', filter);
+        }
+
+        const { data, error } = await query;
+
+        if (error) throw error;
+
+        // Filter by search text manually if needed (Supabase text search requires setup)
+        let reports = data;
+        if (search) {
+            const lowerSearch = search.toLowerCase();
+            reports = data.filter(r => 
+                r.title.toLowerCase().includes(lowerSearch) || 
+                r.description.toLowerCase().includes(lowerSearch)
+            );
+        }
+
+        // Render All Reports
+        if (reports.length === 0) {
+            listContainer.innerHTML = `
+                <div class="empty-state">
+                    <i class="ph ph-file-text"></i>
+                    <h3>No reports found</h3>
+                    <p>Submit your first community report today!</p>
+                </div>`;
+        } else {
+            listContainer.innerHTML = reports.map(report => createReportCard(report)).join('');
+            
+            // Update Recent (Top 3)
+            if (recentContainer) {
+                recentContainer.innerHTML = reports.slice(0, 3).map(report => createReportCard(report, true)).join('');
+            }
+            
+            updateStats(reports);
+        }
+
+    } catch (error) {
+        console.error('Error loading reports:', error);
+        listContainer.innerHTML = `<div class="error-state">Failed to load reports: ${error.message}</div>`;
+    }
+}
+
+/**
+ * Create HTML for a report card
+ */
+function createReportCard(report, isCompact = false) {
+    const statusClass = getStatusClass(report.status);
+    const date = new Date(report.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    
+    const imageHtml = report.image_before 
+        ? `<img src="${report.image_before}" alt="Issue" class="report-img">` 
+        : `<div class="no-image"><i class="ph ph-image"></i></div>`;
+
+    return `
+        <div class="report-card ${isCompact ? 'compact' : ''}">
+            <div class="report-image">
+                ${imageHtml}
+                <span class="status-badge ${statusClass}">${report.status}</span>
+            </div>
+            <div class="report-content">
+                <div class="report-header">
+                    <h4>${report.title}</h4>
+                    <span class="category-tag">${report.category}</span>
+                </div>
+                <p class="report-desc">${isCompact && report.description.length > 60 ? report.description.substring(0, 60) + '...' : report.description}</p>
+                <div class="report-meta">
+                    <span><i class="ph ph-map-pin"></i> ${report.location}</span>
+                    <span><i class="ph ph-clock"></i> ${date}</span>
+                </div>
+                ${report.remarks ? `<div class="admin-reply"><strong>Admin:</strong> ${report.remarks}</div>` : ''}
+            </div>
+        </div>
+    `;
+}
+
+/**
+ * Update Statistics Cards
+ */
+function updateStats(reports) {
+    document.getElementById('totalReports').textContent = reports.length;
+    document.getElementById('pendingReports').textContent = reports.filter(r => r.status === 'Pending').length;
+    document.getElementById('fixedReports').textContent = reports.filter(r => r.status === 'Fixed').length;
+    document.getElementById('emergencyReports').textContent = reports.filter(r => r.severity === 'Emergency').length;
+}
+
+/**
+ * Setup Event Listeners
+ */
+function setupEventListeners() {
+    // Create Report Button
+    const createBtn = document.getElementById('createReportBtn');
+    const modal = document.getElementById('reportModal');
+    const closeBtns = document.querySelectorAll('.close-modal');
+
+    if (createBtn) {
+        createBtn.addEventListener('click', () => {
+            modal.classList.add('active');
+        });
+    }
+
+    closeBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+            modal.classList.remove('active');
+            resetForm();
+        });
+    });
+
+    // File Upload
+    const dropZone = document.getElementById('dropZone');
+    const fileInput = document.getElementById('reportImage');
+    const preview = document.getElementById('imagePreview');
+
+    if (dropZone && fileInput) {
+        dropZone.addEventListener('click', () => fileInput.click());
+        
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files[0]) handleFileSelect(e.target.files[0]);
+        });
+
+        // Drag and Drop
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.classList.add('dragover');
+        });
+        dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('dragover');
+            if (e.dataTransfer.files[0]) handleFileSelect(e.dataTransfer.files[0]);
+        });
+    }
+
+    // GPS Button
+    const gpsBtn = document.getElementById('gpsBtn');
+    const locationInput = document.getElementById('reportLocation');
+    if (gpsBtn && locationInput) {
+        gpsBtn.addEventListener('click', () => {
+            if (!navigator.geolocation) {
+                showToast('Geolocation not supported', 'error');
+                return;
+            }
+            gpsBtn.innerHTML = '<i class="ph ph-spinner spinning"></i> Locating...';
+            navigator.geolocation.getCurrentPosition(
+                (position) => {
+                    locationInput.value = `${position.coords.latitude}, ${position.coords.longitude}`;
+                    gpsBtn.innerHTML = '<i class="ph ph-check"></i> Located';
+                    showToast('Location detected!', 'success');
+                },
+                () => {
+                    showToast('Could not get location', 'error');
+                    gpsBtn.innerHTML = '<i class="ph ph-crosshair"></i> Retry';
+                }
+            );
+        });
+    }
+
+    // Form Submit
+    const form = document.getElementById('reportForm');
+    if (form) {
+        form.addEventListener('submit', handleReportSubmit);
+    }
+
+    // Filters
+    const filterSelect = document.getElementById('filterStatus');
+    const searchInput = document.getElementById('searchInput');
+    
+    if (filterSelect) filterSelect.addEventListener('change', (e) => loadReports(e.target.value, searchInput?.value || ''));
+    if (searchInput) searchInput.addEventListener('input', (e) => loadReports(filterSelect?.value || 'all', e.target.value));
+}
+
+/**
+ * Handle File Selection & Preview
+ */
+function handleFileSelect(file) {
+    if (!file.type.startsWith('image/')) {
+        showToast('Please select an image file', 'error');
+        return;
+    }
+    if (file.size > 5 * 1024 * 1024) { // 5MB limit
+        showToast('Image size must be less than 5MB', 'error');
+        return;
+    }
+
+    selectedFile = file;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        const preview = document.getElementById('imagePreview');
+        preview.innerHTML = `<img src="${e.target.result}" style="max-height: 200px; border-radius: 8px;">`;
+    };
+    reader.readAsDataURL(file);
+}
+
+/**
+ * Submit New Report
+ */
+async function handleReportSubmit(e) {
+    e.preventDefault();
+    const _supabase = getSupabase();
+    const submitBtn = document.getElementById('submitReportBtn');
+    const originalText = submitBtn.innerHTML;
+
+    try {
+        // Disable button
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="ph ph-spinner spinning"></i> Uploading...';
 
         let imageUrl = null;
 
-        // Upload image if provided
-        if (reportData.image) {
-            imageUrl = await uploadImage(reportData.image, user.id);
+        // Upload Image if exists
+        if (selectedFile) {
+            const fileName = `${currentUser.id}/${Date.now()}_${selectedFile.name}`;
+            const { error: uploadError } = await _supabase.storage
+                .from('report-images')
+                .upload(fileName, selectedFile);
+
+            if (uploadError) throw uploadError;
+
+            const { data: urlData } = _supabase.storage
+                .from('report-images')
+                .getPublicUrl(fileName);
+            
+            imageUrl = urlData.publicUrl;
         }
 
-        // Create report in database
-        const { data, error } = await _supabase
+        // Insert Report
+        const { error: insertError } = await _supabase
             .from('reports')
             .insert({
-                title: reportData.title,
-                description: reportData.description,
-                category: reportData.category,
-                severity: reportData.severity,
-                location: reportData.location,
+                title: document.getElementById('reportTitle').value,
+                description: document.getElementById('reportDescription').value,
+                category: document.getElementById('reportCategory').value,
+                severity: document.getElementById('reportSeverity').value,
+                location: document.getElementById('reportLocation').value,
                 image_before: imageUrl,
-                reported_by: user.id,
-                status: 'Pending'
-            })
-            .select()
-            .single();
-
-        if (error) throw error;
-
-        return data;
-    } catch (error) {
-        console.error('Error creating report:', error);
-        throw error;
-    }
-}
-
-/**
- * Upload image to Supabase Storage
- * @param {File|Blob} file - Image file
- * @param {string} userId - User ID for folder organization
- * @returns {Promise<string>} Image URL
- */
-async function uploadImage(file, userId) {
-    try {
-        const fileName = `${userId}/${Date.now()}_${file.name || 'image.jpg'}`;
-        
-        const { data, error } = await _supabase.storage
-            .from(STORAGE_BUCKET)
-            .upload(fileName, file, {
-                cacheControl: '3600',
-                upsert: false
+                status: 'Pending',
+                reported_by: currentUser.id
             });
 
-        if (error) throw error;
+        if (insertError) throw insertError;
 
-        // Get public URL
-        const { data: { publicUrl } } = _supabase.storage
-            .from(STORAGE_BUCKET)
-            .getPublicUrl(fileName);
+        showToast('Report submitted successfully!', 'success');
+        
+        // Close modal and reset
+        document.getElementById('reportModal').classList.remove('active');
+        resetForm();
+        
+        // Reload data
+        await loadReports();
 
-        return publicUrl;
     } catch (error) {
-        console.error('Error uploading image:', error);
-        throw error;
+        console.error('Submit error:', error);
+        showToast('Failed to submit report: ' + error.message, 'error');
+    } finally {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = originalText;
     }
 }
 
 /**
- * Get reports for current user
- * @param {Object} filters - Filter options
- * @returns {Promise<Array>} List of reports
+ * Reset Form
  */
-async function getUserReports(filters = {}) {
-    try {
-        const { data: { user } } = await _supabase.auth.getUser();
-        if (!user) throw new Error('Not authenticated');
-
-        let query = _supabase
-            .from('reports')
-            .select(`
-                *,
-                users!reports_reported_by_fkey (
-                    full_name,
-                    email
-                )
-            `)
-            .eq('reported_by', user.id)
-            .order('created_at', { ascending: false });
-
-        // Apply filters
-        if (filters.status) {
-            query = query.eq('status', filters.status);
-        }
-        if (filters.category) {
-            query = query.eq('category', filters.category);
-        }
-        if (filters.search) {
-            query = query.or(`title.ilike.%${filters.search}%,description.ilike.%${filters.search}%`);
-        }
-
-        const { data, error } = await query;
-        if (error) throw error;
-
-        return data;
-    } catch (error) {
-        console.error('Error fetching reports:', error);
-        return [];
-    }
+function resetForm() {
+    document.getElementById('reportForm').reset();
+    document.getElementById('imagePreview').innerHTML = '';
+    selectedFile = null;
 }
 
 /**
- * Get all reports (for admin)
- * @param {Object} filters - Filter options
- * @returns {Promise<Array>} List of reports
+ * Setup Realtime Subscription
  */
-async function getAllReports(filters = {}) {
-    try {
-        let query = _supabase
-            .from('reports')
-            .select(`
-                *,
-                users!reports_reported_by_fkey (
-                    full_name,
-                    email,
-                    barangay
-                )
-            `)
-            .order('created_at', { ascending: false });
-
-        // Apply filters
-        if (filters.status) {
-            query = query.eq('status', filters.status);
-        }
-        if (filters.category) {
-            query = query.eq('category', filters.category);
-        }
-        if (filters.severity) {
-            query = query.eq('severity', filters.severity);
-        }
-        if (filters.search) {
-            query = query.or(`title.ilike.%${filters.search}%,description.ilike.%${filters.search}%`);
-        }
-
-        const { data, error } = await query;
-        if (error) throw error;
-
-        return data;
-    } catch (error) {
-        console.error('Error fetching all reports:', error);
-        return [];
-    }
-}
-
-/**
- * Get single report by ID
- * @param {string} reportId - Report ID
- * @returns {Promise<Object|null>} Report data
- */
-async function getReportById(reportId) {
-    try {
-        const { data, error } = await _supabase
-            .from('reports')
-            .select(`
-                *,
-                users!reports_reported_by_fkey (
-                    full_name,
-                    email
-                )
-            `)
-            .eq('id', reportId)
-            .single();
-
-        if (error) throw error;
-
-        // Get comments
-        const { data: comments } = await _supabase
-            .from('comments')
-            .select(`
-                *,
-                users (
-                    full_name,
-                    role
-                )
-            `)
-            .eq('report_id', reportId)
-            .order('created_at', { ascending: true });
-
-        data.comments = comments || [];
-
-        return data;
-    } catch (error) {
-        console.error('Error fetching report:', error);
-        return null;
-    }
-}
-
-/**
- * Update report status
- * @param {string} reportId - Report ID
- * @param {string} status - New status
- * @param {string} remarks - Optional remarks
- * @returns {Promise<Object>} Updated report
- */
-async function updateReportStatus(reportId, status, remarks = null) {
-    try {
-        const updates = {
-            status,
-            remarks,
-            updated_at: new Date().toISOString()
-        };
-
-        if (status === 'Fixed') {
-            updates.fixed_at = new Date().toISOString();
-        }
-
-        const { data, error } = await _supabase
-            .from('reports')
-            .update(updates)
-            .eq('id', reportId)
-            .select()
-            .single();
-
-        if (error) throw error;
-
-        return data;
-    } catch (error) {
-        console.error('Error updating report status:', error);
-        throw error;
-    }
-}
-
-/**
- * Update report with proof of fix
- * @param {string} reportId - Report ID
- * @param {File} imageAfter - After photo
- * @param {string} remarks - Remarks
- * @returns {Promise<Object>} Updated report
- */
-async function submitProofOfFix(reportId, imageAfter, remarks) {
-    try {
-        const { data: { user } } = await _supabase.auth.getUser();
-        if (!user) throw new Error('Not authenticated');
-
-        // Upload after image
-        const imageUrl = await uploadImage(imageAfter, user.id);
-
-        // Update report
-        const { data, error } = await _supabase
-            .from('reports')
-            .update({
-                image_after: imageUrl,
-                remarks,
-                status: 'Fixed',
-                fixed_at: new Date().toISOString(),
-                updated_at: new Date().toISOString()
-            })
-            .eq('id', reportId)
-            .select()
-            .single();
-
-        if (error) throw error;
-
-        return data;
-    } catch (error) {
-        console.error('Error submitting proof of fix:', error);
-        throw error;
-    }
-}
-
-/**
- * Add comment to report
- * @param {string} reportId - Report ID
- * @param {string} message - Comment message
- * @returns {Promise<Object>} Created comment
- */
-async function addComment(reportId, message) {
-    try {
-        const { data: { user } } = await _supabase.auth.getUser();
-        if (!user) throw new Error('Not authenticated');
-
-        const { data, error } = await _supabase
-            .from('comments')
-            .insert({
-                report_id: reportId,
-                user_id: user.id,
-                message
-            })
-            .select()
-            .single();
-
-        if (error) throw error;
-
-        return data;
-    } catch (error) {
-        console.error('Error adding comment:', error);
-        throw error;
-    }
-}
-
-/**
- * Delete report
- * @param {string} reportId - Report ID
- * @returns {Promise<boolean>} Success status
- */
-async function deleteReport(reportId) {
-    try {
-        const { error } = await _supabase
-            .from('reports')
-            .delete()
-            .eq('id', reportId);
-
-        if (error) throw error;
-
-        return true;
-    } catch (error) {
-        console.error('Error deleting report:', error);
-        throw error;
-    }
-}
-
-/**
- * Get report statistics
- * @returns {Promise<Object>} Statistics object
- */
-async function getReportStats() {
-    try {
-        const { data: { user } } = await _supabase.auth.getUser();
-        if (!user) throw new Error('Not authenticated');
-
-        // Check if admin
-        const { data: userProfile } = await _supabase
-            .from('users')
-            .select('role')
-            .eq('id', user.id)
-            .single();
-
-        let reports;
-        if (userProfile?.role === 'admin') {
-            reports = await getAllReports();
-        } else {
-            reports = await getUserReports();
-        }
-
-        const stats = {
-            total: reports.length,
-            pending: reports.filter(r => r.status === 'Pending').length,
-            underReview: reports.filter(r => r.status === 'Under Review').length,
-            inProgress: reports.filter(r => r.status === 'In Progress').length,
-            fixed: reports.filter(r => r.status === 'Fixed').length,
-            rejected: reports.filter(r => r.status === 'Rejected').length,
-            emergency: reports.filter(r => r.severity === 'Emergency').length
-        };
-
-        return stats;
-    } catch (error) {
-        console.error('Error getting stats:', error);
-        return {
-            total: 0,
-            pending: 0,
-            underReview: 0,
-            inProgress: 0,
-            fixed: 0,
-            rejected: 0,
-            emergency: 0
-        };
-    }
-}
-
-/**
- * Subscribe to realtime report updates
- * @param {Function} callback - Callback function
- * @returns {Function} Unsubscribe function
- */
-function subscribeToReports(callback) {
-    const channel = _supabase
-        .channel('reports')
-        .on(
-            'postgres_changes',
-            {
-                event: '*',
-                schema: 'public',
-                table: 'reports'
-            },
-            callback
+function setupRealtime() {
+    const _supabase = getSupabase();
+    
+    _supabase.channel('reports')
+        .on('postgres_changes', 
+            { event: '*', schema: 'public', table: 'reports' }, 
+            (payload) => {
+                console.log('Realtime update:', payload);
+                // Only refresh if the change belongs to current user or is a global update we care about
+                if (payload.new?.reported_by === currentUser.id) {
+                    loadReports();
+                    showToast('Report updated!', 'info');
+                }
+            }
         )
         .subscribe();
-
-    return () => {
-        _supabase.removeChannel(channel);
-    };
 }
 
-// Export functions
-window.createReport = createReport;
-window.uploadImage = uploadImage;
-window.getUserReports = getUserReports;
-window.getAllReports = getAllReports;
-window.getReportById = getReportById;
-window.updateReportStatus = updateReportStatus;
-window.submitProofOfFix = submitProofOfFix;
-window.addComment = addComment;
-window.deleteReport = deleteReport;
-window.getReportStats = getReportStats;
-window.subscribeToReports = subscribeToReports;
-window.CATEGORIES = CATEGORIES;
-window.STATUSES = STATUSES;
-window.SEVERITIES = SEVERITIES;
+/**
+ * Helper: Get Status Class
+ */
+function getStatusClass(status) {
+    switch(status) {
+        case 'Pending': return 'status-pending';
+        case 'Under Review': return 'status-review';
+        case 'In Progress': return 'status-progress';
+        case 'Fixed': return 'status-fixed';
+        case 'Rejected': return 'status-rejected';
+        default: return '';
+    }
+}
+
+// Expose functions globally if needed
+window.loadReports = loadReports;
