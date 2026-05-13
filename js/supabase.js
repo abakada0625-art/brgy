@@ -8,8 +8,8 @@
  */
 
 // Supabase configuration
-const SUPABASE_URL = 'YOUR_SUPABASE_URL'; // Replace with your Supabase project URL
-const SUPABASE_ANON_KEY = 'YOUR_SUPABASE_ANON_KEY'; // Replace with your anon/public key
+const SUPABASE_URL = 'Yhttps://bjcarjugqrbwkrctcjrp.supabase.co'; // Replace with your Supabase project URL
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJqY2FyanVncXJid2tyY3RjanJwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg2NDU3MTcsImV4cCI6MjA5NDIyMTcxN30.GrEgVIvI4k0N8mA6FEsft6aSn59FuOKZDbue0c6OpbI'; // Replace with your anon/public key
 
 // Initialize Supabase client
 const { createClient } = supabase;
