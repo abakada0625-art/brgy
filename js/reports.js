@@ -1,357 +1,119 @@
 /**
- * AyosPH - Reports Module
- * ========================
- * Handles CRUD operations for community reports.
+ * AyosPH - Report Handling Module
  */
 
-let currentUser = null;
-let selectedFile = null;
+async function loadReports(userId) {
+    const { data, error } = await window.supabaseClient
+        .from('reports')
+        .select('*')
+        .eq('reported_by', userId)
+        .order('created_at', { ascending: false });
 
-// Initialize when DOM is ready
-document.addEventListener('DOMContentLoaded', async () => {
-    await initReports();
-});
-
-async function initReports() {
-    const _supabase = getSupabase();
-    
-    // Get Current User
-    const { data: { user } } = await _supabase.auth.getUser();
-    if (!user) {
-        window.location.href = 'login.html';
+    if (error) {
+        console.error('Error loading reports:', error);
         return;
     }
-    currentUser = user;
 
-    // Load initial data
-    await loadReports();
-    setupEventListeners();
-    setupRealtime();
+    renderReports(data);
+    updateStats(data);
 }
 
-/**
- * Fetch reports for the current user
- */
-async function loadReports(filter = 'all', search = '') {
-    const _supabase = getSupabase();
-    const listContainer = document.getElementById('allReportsList');
-    const recentContainer = document.getElementById('recentReportsList');
+function renderReports(reports) {
+    const container = document.getElementById('all-reports-container');
+    const recentContainer = document.getElementById('recent-reports-container');
     
-    if (!listContainer) return;
+    if (reports.length === 0) {
+        const emptyState = `<div style="text-align:center; padding: 3rem; color: var(--secondary);"><i class="ph ph-folder-open" style="font-size: 3rem; margin-bottom: 1rem; opacity: 0.5;"></i><p>No reports found. Submit your first report!</p></div>`;
+        if(container) container.innerHTML = emptyState;
+        if(recentContainer) recentContainer.innerHTML = emptyState;
+        return;
+    }
 
-    // Show loading
-    listContainer.innerHTML = '<div class="loading-state">Loading reports...</div>';
-
-    try {
-        let query = _supabase
-            .from('reports')
-            .select('*')
-            .eq('reported_by', currentUser.id)
-            .order('created_at', { ascending: false });
-
-        // Apply Filters
-        if (filter !== 'all') {
-            query = query.eq('status', filter);
-        }
-
-        const { data, error } = await query;
-
-        if (error) throw error;
-
-        // Filter by search text manually if needed (Supabase text search requires setup)
-        let reports = data;
-        if (search) {
-            const lowerSearch = search.toLowerCase();
-            reports = data.filter(r => 
-                r.title.toLowerCase().includes(lowerSearch) || 
-                r.description.toLowerCase().includes(lowerSearch)
-            );
-        }
-
-        // Render All Reports
-        if (reports.length === 0) {
-            listContainer.innerHTML = `
-                <div class="empty-state">
-                    <i class="ph ph-file-text"></i>
-                    <h3>No reports found</h3>
-                    <p>Submit your first community report today!</p>
-                </div>`;
-        } else {
-            listContainer.innerHTML = reports.map(report => createReportCard(report)).join('');
-            
-            // Update Recent (Top 3)
-            if (recentContainer) {
-                recentContainer.innerHTML = reports.slice(0, 3).map(report => createReportCard(report, true)).join('');
-            }
-            
-            updateStats(reports);
-        }
-
-    } catch (error) {
-        console.error('Error loading reports:', error);
-        listContainer.innerHTML = `<div class="error-state">Failed to load reports: ${error.message}</div>`;
+    const html = reports.map(report => createReportCard(report)).join('');
+    
+    if (container) container.innerHTML = html;
+    if (recentContainer) {
+        // Show only top 3 for overview
+        recentContainer.innerHTML = reports.slice(0, 3).map(createReportCard).join('');
     }
 }
 
-/**
- * Create HTML for a report card
- */
-function createReportCard(report, isCompact = false) {
-    const statusClass = getStatusClass(report.status);
-    const date = new Date(report.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+function createReportCard(report) {
+    const statusClass = `badge-${report.status.toLowerCase().replace(' ', '-')}`;
+    const date = new Date(report.created_at).toLocaleDateString();
     
-    const imageHtml = report.image_before 
-        ? `<img src="${report.image_before}" alt="Issue" class="report-img">` 
-        : `<div class="no-image"><i class="ph ph-image"></i></div>`;
-
     return `
-        <div class="report-card ${isCompact ? 'compact' : ''}">
-            <div class="report-image">
-                ${imageHtml}
-                <span class="status-badge ${statusClass}">${report.status}</span>
+    <div class="report-card">
+        <img src="${report.image_before}" alt="Issue" class="report-img" onerror="this.src='https://via.placeholder.com/100?text=No+Image'">
+        <div class="report-info">
+            <div class="report-header">
+                <h4 style="font-weight: 600; font-size: 1.1rem;">${report.title}</h4>
+                <span class="badge ${statusClass}">${report.status}</span>
             </div>
-            <div class="report-content">
-                <div class="report-header">
-                    <h4>${report.title}</h4>
-                    <span class="category-tag">${report.category}</span>
-                </div>
-                <p class="report-desc">${isCompact && report.description.length > 60 ? report.description.substring(0, 60) + '...' : report.description}</p>
-                <div class="report-meta">
-                    <span><i class="ph ph-map-pin"></i> ${report.location}</span>
-                    <span><i class="ph ph-clock"></i> ${date}</span>
-                </div>
-                ${report.remarks ? `<div class="admin-reply"><strong>Admin:</strong> ${report.remarks}</div>` : ''}
+            <p style="color: var(--secondary); font-size: 0.9rem; margin-bottom: 0.5rem;">${report.category} • ${report.severity}</p>
+            <p style="font-size: 0.9rem; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">${report.description}</p>
+            <div style="margin-top: 0.75rem; font-size: 0.8rem; color: #94a3b8;">
+                <i class="ph ph-clock"></i> ${date} • <i class="ph ph-map-pin"></i> ${report.location}
             </div>
         </div>
+    </div>
     `;
 }
 
-/**
- * Update Statistics Cards
- */
 function updateStats(reports) {
-    document.getElementById('totalReports').textContent = reports.length;
-    document.getElementById('pendingReports').textContent = reports.filter(r => r.status === 'Pending').length;
-    document.getElementById('fixedReports').textContent = reports.filter(r => r.status === 'Fixed').length;
-    document.getElementById('emergencyReports').textContent = reports.filter(r => r.severity === 'Emergency').length;
+    document.getElementById('stat-total').innerText = reports.length;
+    document.getElementById('stat-pending').innerText = reports.filter(r => ['Pending', 'Under Review'].includes(r.status)).length;
+    document.getElementById('stat-resolved').innerText = reports.filter(r => r.status === 'Fixed').length;
 }
 
-/**
- * Setup Event Listeners
- */
-function setupEventListeners() {
-    // Create Report Button
-    const createBtn = document.getElementById('createReportBtn');
-    const modal = document.getElementById('reportModal');
-    const closeBtns = document.querySelectorAll('.close-modal');
-
-    if (createBtn) {
-        createBtn.addEventListener('click', () => {
-            modal.classList.add('active');
-        });
-    }
-
-    closeBtns.forEach(btn => {
-        btn.addEventListener('click', () => {
-            modal.classList.remove('active');
-            resetForm();
-        });
-    });
-
-    // File Upload
-    const dropZone = document.getElementById('dropZone');
-    const fileInput = document.getElementById('reportImage');
-    const preview = document.getElementById('imagePreview');
-
-    if (dropZone && fileInput) {
-        dropZone.addEventListener('click', () => fileInput.click());
-        
-        fileInput.addEventListener('change', (e) => {
-            if (e.target.files[0]) handleFileSelect(e.target.files[0]);
-        });
-
-        // Drag and Drop
-        dropZone.addEventListener('dragover', (e) => {
-            e.preventDefault();
-            dropZone.classList.add('dragover');
-        });
-        dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
-        dropZone.addEventListener('drop', (e) => {
-            e.preventDefault();
-            dropZone.classList.remove('dragover');
-            if (e.dataTransfer.files[0]) handleFileSelect(e.dataTransfer.files[0]);
-        });
-    }
-
-    // GPS Button
-    const gpsBtn = document.getElementById('gpsBtn');
-    const locationInput = document.getElementById('reportLocation');
-    if (gpsBtn && locationInput) {
-        gpsBtn.addEventListener('click', () => {
-            if (!navigator.geolocation) {
-                showToast('Geolocation not supported', 'error');
-                return;
-            }
-            gpsBtn.innerHTML = '<i class="ph ph-spinner spinning"></i> Locating...';
-            navigator.geolocation.getCurrentPosition(
-                (position) => {
-                    locationInput.value = `${position.coords.latitude}, ${position.coords.longitude}`;
-                    gpsBtn.innerHTML = '<i class="ph ph-check"></i> Located';
-                    showToast('Location detected!', 'success');
-                },
-                () => {
-                    showToast('Could not get location', 'error');
-                    gpsBtn.innerHTML = '<i class="ph ph-crosshair"></i> Retry';
-                }
-            );
-        });
-    }
-
-    // Form Submit
-    const form = document.getElementById('reportForm');
-    if (form) {
-        form.addEventListener('submit', handleReportSubmit);
-    }
-
-    // Filters
-    const filterSelect = document.getElementById('filterStatus');
-    const searchInput = document.getElementById('searchInput');
-    
-    if (filterSelect) filterSelect.addEventListener('change', (e) => loadReports(e.target.value, searchInput?.value || ''));
-    if (searchInput) searchInput.addEventListener('input', (e) => loadReports(filterSelect?.value || 'all', e.target.value));
-}
-
-/**
- * Handle File Selection & Preview
- */
-function handleFileSelect(file) {
-    if (!file.type.startsWith('image/')) {
-        showToast('Please select an image file', 'error');
-        return;
-    }
-    if (file.size > 5 * 1024 * 1024) { // 5MB limit
-        showToast('Image size must be less than 5MB', 'error');
-        return;
-    }
-
-    selectedFile = file;
-    const reader = new FileReader();
-    reader.onload = (e) => {
-        const preview = document.getElementById('imagePreview');
-        preview.innerHTML = `<img src="${e.target.result}" style="max-height: 200px; border-radius: 8px;">`;
-    };
-    reader.readAsDataURL(file);
-}
-
-/**
- * Submit New Report
- */
 async function handleReportSubmit(e) {
     e.preventDefault();
-    const _supabase = getSupabase();
-    const submitBtn = document.getElementById('submitReportBtn');
-    const originalText = submitBtn.innerHTML;
+    const form = e.target;
+    const submitBtn = form.querySelector('button[type="submit"]');
+    
+    submitBtn.disabled = true;
+    submitBtn.innerText = 'Submitting...';
 
     try {
-        // Disable button
-        submitBtn.disabled = true;
-        submitBtn.innerHTML = '<i class="ph ph-spinner spinning"></i> Uploading...';
+        const session = await getSession();
+        const file = form.image.files[0];
+        let imagePath = '';
 
-        let imageUrl = null;
-
-        // Upload Image if exists
-        if (selectedFile) {
-            const fileName = `${currentUser.id}/${Date.now()}_${selectedFile.name}`;
-            const { error: uploadError } = await _supabase.storage
-                .from('report-images')
-                .upload(fileName, selectedFile);
-
+        // Upload Image
+        if (file) {
+            const fileName = `report_${Date.now()}_${file.name}`;
+            const { error: uploadError, data } = await window.supabaseClient.storage.from('report-images').upload(fileName, file);
             if (uploadError) throw uploadError;
-
-            const { data: urlData } = _supabase.storage
-                .from('report-images')
-                .getPublicUrl(fileName);
-            
-            imageUrl = urlData.publicUrl;
+            imagePath = data.path;
         }
 
         // Insert Report
-        const { error: insertError } = await _supabase
-            .from('reports')
-            .insert({
-                title: document.getElementById('reportTitle').value,
-                description: document.getElementById('reportDescription').value,
-                category: document.getElementById('reportCategory').value,
-                severity: document.getElementById('reportSeverity').value,
-                location: document.getElementById('reportLocation').value,
-                image_before: imageUrl,
-                status: 'Pending',
-                reported_by: currentUser.id
-            });
+        const { error } = await window.supabaseClient.from('reports').insert({
+            title: form.title.value,
+            category: form.category.value,
+            severity: form.severity.value,
+            description: form.description.value,
+            location: form.location.value,
+            image_before: imagePath,
+            reported_by: session.user.id,
+            status: 'Pending'
+        });
 
-        if (insertError) throw insertError;
+        if (error) throw error;
 
         showToast('Report submitted successfully!', 'success');
+        closeReportModal();
+        form.reset();
+        document.getElementById('image-preview').style.display = 'none';
         
-        // Close modal and reset
-        document.getElementById('reportModal').classList.remove('active');
-        resetForm();
-        
-        // Reload data
-        await loadReports();
+        // Reload reports
+        loadReports(session.user.id);
 
     } catch (error) {
-        console.error('Submit error:', error);
+        console.error(error);
         showToast('Failed to submit report: ' + error.message, 'error');
     } finally {
         submitBtn.disabled = false;
-        submitBtn.innerHTML = originalText;
+        submitBtn.innerText = 'Submit Report';
     }
 }
-
-/**
- * Reset Form
- */
-function resetForm() {
-    document.getElementById('reportForm').reset();
-    document.getElementById('imagePreview').innerHTML = '';
-    selectedFile = null;
-}
-
-/**
- * Setup Realtime Subscription
- */
-function setupRealtime() {
-    const _supabase = getSupabase();
-    
-    _supabase.channel('reports')
-        .on('postgres_changes', 
-            { event: '*', schema: 'public', table: 'reports' }, 
-            (payload) => {
-                console.log('Realtime update:', payload);
-                // Only refresh if the change belongs to current user or is a global update we care about
-                if (payload.new?.reported_by === currentUser.id) {
-                    loadReports();
-                    showToast('Report updated!', 'info');
-                }
-            }
-        )
-        .subscribe();
-}
-
-/**
- * Helper: Get Status Class
- */
-function getStatusClass(status) {
-    switch(status) {
-        case 'Pending': return 'status-pending';
-        case 'Under Review': return 'status-review';
-        case 'In Progress': return 'status-progress';
-        case 'Fixed': return 'status-fixed';
-        case 'Rejected': return 'status-rejected';
-        default: return '';
-    }
-}
-
-// Expose functions globally if needed
-window.loadReports = loadReports;
