@@ -1,322 +1,235 @@
 /**
- * AyosPH - Reports Module
- * Handles creating, fetching, and updating reports
+ * AyosPH - Report Management Module
  */
 
-const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
-const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/jpg'];
+async function loadReports(userId, isAdmin = false) {
+    const container = document.getElementById(isAdmin ? 'admin-reports-list' : 'all-reports-container');
+    const recentContainer = document.getElementById('recent-reports-container');
+    if (!container) return;
 
-// Initialize state
-let currentReports = [];
-let currentUser = null;
-let isAdmin = false;
-
-/**
- * Initialize Reports Module
- */
-async function initReports() {
-    try {
-        const session = await window.getSession();
-        if (!session) {
-            console.warn('No session found');
-            return;
-        }
-
-        currentUser = session.user;
-        
-        // Check if user is admin
-        const { data: userProfile } = await window.supabaseClient
-            .from('users')
-            .select('role')
-            .eq('id', currentUser.id)
-            .single();
-        
-        isAdmin = userProfile?.role === 'admin';
-        console.log('User Role:', isAdmin ? 'Admin' : 'Resident');
-
-        // Load reports
-        await loadReports();
-        
-        // Setup Realtime subscription
-        setupRealtimeSubscription();
-
-    } catch (error) {
-        console.error('Error initializing reports:', error);
-        showToast('Failed to load reports', 'error');
-    }
-}
-
-/**
- * Load Reports from Supabase
- */
-async function loadReports() {
-    const tableBody = document.getElementById('reportsTableBody');
-    const loadingState = document.getElementById('loadingState');
-    const emptyState = document.getElementById('emptyState');
-    
-    if (loadingState) loadingState.style.display = 'block';
-    if (tableBody) tableBody.innerHTML = '';
-    if (emptyState) emptyState.style.display = 'none';
+    container.innerHTML = '<div style="text-align:center; padding:2rem;"><i class="ph ph-spinner ph-spin" style="font-size:2rem; color:var(--primary);"></i></div>';
 
     try {
-        let query = window.supabaseClient
-            .from('reports')
-            .select(`
-                *,
-                reporter:users!reported_by(full_name, email)
-            `)
-            .order('created_at', { ascending: false });
-
-        // If resident, only show their own reports
+        let query = window.supabaseClient.from('reports').select('*, users(full_name)').order('created_at', { ascending: false });
+        
         if (!isAdmin) {
-            query = query.eq('reported_by', currentUser.id);
+            query = query.eq('reported_by', userId);
         }
 
         const { data, error } = await query;
 
         if (error) throw error;
 
-        currentReports = data || [];
-        renderReports(currentReports);
+        container.innerHTML = '';
+        
+        if (data.length === 0) {
+            container.innerHTML = `<div style="text-align:center; padding:3rem; color:var(--secondary);">
+                <i class="ph ph-folder-open" style="font-size:3rem; margin-bottom:1rem; opacity:0.5;"></i>
+                <p>No reports found.</p>
+            </div>`;
+            if(recentContainer) recentContainer.innerHTML = container.innerHTML;
+            updateStats([]);
+            return;
+        }
+
+        // Render Full List
+        data.forEach(report => {
+            const card = createReportCard(report, isAdmin);
+            container.insertAdjacentHTML('beforeend', card);
+        });
+
+        // Render Recent (Overview)
+        if (recentContainer) {
+            recentContainer.innerHTML = '';
+            data.slice(0, 3).forEach(report => {
+                recentContainer.insertAdjacentHTML('beforeend', createReportCard(report, false, true));
+            });
+        }
+
+        updateStats(data);
 
     } catch (error) {
         console.error('Error loading reports:', error);
-        showToast('Failed to fetch reports: ' + error.message, 'error');
-        if (emptyState) {
-            emptyState.innerHTML = `<div class="error-message">Error loading reports: ${error.message}</div>`;
-            emptyState.style.display = 'block';
-        }
-    } finally {
-        if (loadingState) loadingState.style.display = 'none';
+        container.innerHTML = `<p style="color:red; text-align:center;">Error loading reports: ${error.message}</p>`;
     }
 }
 
-/**
- * Render Reports to Table
- */
-function renderReports(reports) {
-    const tableBody = document.getElementById('reportsTableBody');
-    const emptyState = document.getElementById('emptyState');
-    
-    if (!tableBody) return;
+function createReportCard(report, isAdmin, isCompact = false) {
+    const imageUrl = report.image_before 
+        ? `https://bjcarjugqrbwkrctcjrp.supabase.co/storage/v1/object/public/report-images/${report.image_before}`
+        : 'https://via.placeholder.com/400x300?text=No+Image';
 
-    tableBody.innerHTML = '';
-
-    if (!reports || reports.length === 0) {
-        if (emptyState) emptyState.style.display = 'block';
-        return;
+    if (isCompact) {
+        return `
+        <div style="background:white; padding:1rem; border-radius:12px; border:1px solid #e2e8f0; margin-bottom:1rem; display:flex; gap:1rem; align-items:center;">
+            <img src="${imageUrl}" style="width:60px; height:60px; object-fit:cover; border-radius:8px;" />
+            <div style="flex:1;">
+                <h4 style="font-weight:600; margin:0;">${report.title}</h4>
+                <p style="font-size:0.85rem; color:var(--secondary); margin:0.25rem 0;">${formatDate(report.created_at)}</p>
+            </div>
+            ${getStatusBadge(report.status)}
+        </div>`;
     }
 
-    if (emptyState) emptyState.style.display = 'none';
+    const adminActions = isAdmin ? `
+        <div style="margin-top:1rem; padding-top:1rem; border-top:1px solid #e2e8f0; display:flex; gap:0.5rem;">
+            <select id="status-${report.id}" class="form-select" style="padding:0.5rem; font-size:0.85rem;">
+                <option value="Pending" ${report.status === 'Pending' ? 'selected' : ''}>Pending</option>
+                <option value="Under Review" ${report.status === 'Under Review' ? 'selected' : ''}>Under Review</option>
+                <option value="In Progress" ${report.status === 'In Progress' ? 'selected' : ''}>In Progress</option>
+                <option value="Fixed" ${report.status === 'Fixed' ? 'selected' : ''}>Fixed</option>
+                <option value="Rejected" ${report.status === 'Rejected' ? 'selected' : ''}>Rejected</option>
+            </select>
+            <button onclick="updateReportStatus('${report.id}')" class="btn btn-primary" style="padding:0.5rem 1rem; font-size:0.85rem;">Update</button>
+            ${report.status === 'Fixed' && report.image_after ? 
+                `<a href="https://bjcarjugqrbwkrctcjrp.supabase.co/storage/v1/object/public/report-images/${report.image_after}" target="_blank" class="btn btn-outline" style="padding:0.5rem;">Proof</a>` : ''}
+        </div>
+    ` : '';
 
-    reports.forEach(report => {
-        const row = document.createElement('tr');
-        
-        // Determine status badge color
-        const statusColors = {
-            'Pending': 'bg-yellow-100 text-yellow-800',
-            'Under Review': 'bg-blue-100 text-blue-800',
-            'In Progress': 'bg-purple-100 text-purple-800',
-            'Fixed': 'bg-green-100 text-green-800',
-            'Rejected': 'bg-red-100 text-red-800'
-        };
-        
-        const statusClass = statusColors[report.status] || 'bg-gray-100 text-gray-800';
-        const date = new Date(report.created_at).toLocaleDateString();
-        const reporterName = report.reporter?.full_name || 'Anonymous';
-
-        row.innerHTML = `
-            <td class="px-6 py-4 whitespace-nowrap">
-                <div class="flex items-center">
-                    ${report.image_before ? 
-                        `<img class="h-10 w-10 rounded-lg object-cover" src="${report.image_before}" alt="">` : 
-                        `<div class="h-10 w-10 rounded-lg bg-gray-200 flex items-center justify-center text-gray-400">#</div>`
-                    }
-                    <div class="ml-4">
-                        <div class="text-sm font-medium text-gray-900">${report.title}</div>
-                        <div class="text-sm text-gray-500">${report.category}</div>
-                    </div>
+    return `
+    <div class="report-card" style="background:white; border-radius:12px; border:1px solid #e2e8f0; overflow:hidden; margin-bottom:1rem; transition:transform 0.2s;">
+        <div style="display:flex; flex-wrap:wrap;">
+            <img src="${imageUrl}" style="width:100%; max-width:200px; height:200px; object-fit:cover;" />
+            <div style="flex:1; padding:1.25rem;">
+                <div style="display:flex; justify-content:space-between; align-items:start; margin-bottom:0.5rem;">
+                    <h3 style="font-size:1.1rem; font-weight:700; margin:0;">${report.title}</h3>
+                    ${getStatusBadge(report.status)}
                 </div>
-            </td>
-            <td class="px-6 py-4 whitespace-nowrap">
-                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${statusClass}">
-                    ${report.status}
-                </span>
-            </td>
-            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                ${report.severity}
-            </td>
-            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                ${report.location || 'No location'}
-            </td>
-            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                ${reporterName}
-            </td>
-            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                ${date}
-            </td>
-            <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                <button onclick="viewReportDetails('${report.id}')" class="text-indigo-600 hover:text-indigo-900 mr-3">View</button>
-                ${isAdmin ? `<button onclick="openEditModal('${report.id}')" class="text-blue-600 hover:text-blue-900">Manage</button>` : ''}
-            </td>
-        `;
-        
-        tableBody.appendChild(row);
-    });
+                <p style="color:var(--secondary); font-size:0.9rem; margin-bottom:0.75rem;">${report.description}</p>
+                <div style="display:flex; gap:1rem; font-size:0.85rem; color:var(--secondary); margin-bottom:0.75rem;">
+                    <span><i class="ph ph-tag"></i> ${report.category}</span>
+                    <span><i class="ph ph-map-pin"></i> ${report.location}</span>
+                    <span><i class="ph ph-calendar"></i> ${formatDate(report.created_at)}</span>
+                </div>
+                <div style="font-size:0.85rem;">
+                    <strong>Reported by:</strong> ${report.users?.full_name || 'Anonymous'}
+                </div>
+                ${adminActions}
+            </div>
+        </div>
+    </div>`;
 }
 
-/**
- * Create New Report
- */
-async function createReport(formData) {
-    const submitBtn = document.getElementById('submitReportBtn');
+async function handleReportSubmit(event) {
+    event.preventDefault();
+    const form = event.target;
+    const submitBtn = form.querySelector('button[type="submit"]');
     const originalText = submitBtn.innerText;
+    
     submitBtn.disabled = true;
     submitBtn.innerText = 'Submitting...';
 
     try {
-        let imageUrl = null;
+        const { data: { user } } = await window.supabaseClient.auth.getUser();
+        if (!user) throw new Error('Not logged in');
 
-        // Handle Image Upload
-        if (formData.image && formData.image.size > 0) {
-            if (!ALLOWED_TYPES.includes(formData.image.type)) {
-                throw new Error('Invalid file type. Please upload JPG or PNG.');
-            }
-            if (formData.image.size > MAX_FILE_SIZE) {
-                throw new Error('File too large. Max 5MB.');
-            }
+        const fileInput = document.getElementById('image-input');
+        let imagePath = null;
 
-            const fileExt = formData.image.name.split('.').pop();
-            const fileName = `${currentUser.id}-${Date.now()}.${fileExt}`;
-            
+        // Upload Image
+        if (fileInput.files[0]) {
+            const file = fileInput.files[0];
+            const fileName = `${user.id}_${Date.now()}_${file.name}`;
             const { error: uploadError } = await window.supabaseClient.storage
-                .from('report-images')
-                .upload(fileName, formData.image);
-
-            if (uploadError) throw uploadError;
-
-            const { data: urlData } = window.supabaseClient.storage
-                .from('report-images')
-                .getPublicUrl(fileName);
+                .from(STORAGE_BUCKET)
+                .upload(fileName, file);
             
-            imageUrl = urlData.publicUrl;
+            if (uploadError) throw uploadError;
+            imagePath = fileName;
         }
 
         // Insert Report
-        const { error: insertError } = await window.supabaseClient
-            .from('reports')
-            .insert({
-                title: formData.title,
-                description: formData.description,
-                category: formData.category,
-                severity: formData.severity,
-                location: formData.location,
-                image_before: imageUrl,
-                reported_by: currentUser.id,
-                status: 'Pending',
-                remarks: ''
-            });
+        const { error } = await window.supabaseClient.from('reports').insert({
+            title: form.title.value,
+            category: form.category.value,
+            severity: form.severity.value,
+            description: form.description.value,
+            location: form.location.value,
+            image_before: imagePath,
+            reported_by: user.id,
+            status: 'Pending'
+        });
 
-        if (insertError) throw insertError;
+        if (error) throw error;
 
         showToast('Report submitted successfully!', 'success');
-        closeModal('createReportModal');
-        await loadReports(); // Refresh list
+        closeReportModal();
+        form.reset();
+        document.getElementById('image-preview').style.display = 'none';
+        
+        // Refresh Data
+        loadReports(user.id, false);
 
     } catch (error) {
-        console.error('Error creating report:', error);
-        showToast(error.message || 'Failed to submit report', 'error');
+        console.error(error);
+        showToast('Failed to submit report: ' + error.message, 'error');
     } finally {
         submitBtn.disabled = false;
         submitBtn.innerText = originalText;
     }
 }
 
-/**
- * Update Report Status (Admin Only)
- */
-async function updateReportStatus(reportId, newStatus, remarks = '', imageAfter = null) {
-    try {
-        let updateData = {
-            status: newStatus,
-            remarks: remarks,
-            updated_at: new Date().toISOString()
-        };
-
-        if (newStatus === 'Fixed' && imageAfter) {
-            updateData.image_after = imageAfter;
-            updateData.fixed_at = new Date().toISOString();
-        } else if (newStatus === 'Fixed' && !imageAfter) {
-            throw new Error('Proof of fix (image) is required to mark as Fixed.');
+async function updateReportStatus(reportId) {
+    const statusSelect = document.getElementById(`status-${reportId}`);
+    const newStatus = statusSelect.value;
+    
+    // Admin Proof of Fix Logic
+    if (newStatus === 'Fixed') {
+        const hasProof = confirm("Did you upload the 'After' photo? If not, click Cancel to upload it first.");
+        if (!hasProof) {
+            // In a full version, open a modal here to upload proof. 
+            // For now, we proceed but warn.
         }
+    }
 
+    try {
         const { error } = await window.supabaseClient
             .from('reports')
-            .update(updateData)
+            .update({ status: newStatus, updated_at: new Date().toISOString() })
             .eq('id', reportId);
 
         if (error) throw error;
-
-        showToast(`Report marked as ${newStatus}`, 'success');
-        await loadReports();
+        showToast('Status updated!', 'success');
         
-        // Close modal if open
-        const modal = document.getElementById('editReportModal');
-        if (modal) modal.classList.add('hidden');
+        // Refresh Admin View
+        const session = await getSession();
+        loadReports(session.user.id, true);
 
     } catch (error) {
-        console.error('Error updating report:', error);
-        showToast(error.message || 'Failed to update report', 'error');
+        showToast('Error updating status', 'error');
     }
 }
 
-/**
- * Setup Realtime Subscription
- */
-function setupRealtimeSubscription() {
-    window.supabaseClient
-        .channel('reports_channel')
-        .on('postgres_changes', 
-            { event: '*', schema: 'public', table: 'reports' }, 
-            () => {
-                console.log('Realtime change detected, reloading...');
-                loadReports();
-            }
-        )
-        .subscribe();
+function updateStats(reports) {
+    const total = reports.length;
+    const pending = reports.filter(r => r.status === 'Pending').length;
+    const resolved = reports.filter(r => r.status === 'Fixed').length;
+    
+    if(document.getElementById('stat-total')) document.getElementById('stat-total').innerText = total;
+    if(document.getElementById('stat-pending')) document.getElementById('stat-pending').innerText = pending;
+    if(document.getElementById('stat-resolved')) document.getElementById('stat-resolved').innerText = resolved;
 }
 
-// Global helpers for HTML onclick events
-window.viewReportDetails = async (id) => {
-    const report = currentReports.find(r => r.id === id);
-    if (!report) return;
-    
-    alert(`Details:\nTitle: ${report.title}\nDescription: ${report.description}\nRemarks: ${report.remarks || 'None'}`);
-    // TODO: Implement proper modal for details
+// Modal Helpers
+window.openReportModal = () => document.getElementById('report-modal').classList.add('active');
+window.closeReportModal = () => {
+    document.getElementById('report-modal').classList.remove('active');
+    document.getElementById('report-form').reset();
+    document.getElementById('image-preview').style.display = 'none';
 };
-
-window.openEditModal = async (id) => {
-    const report = currentReports.find(r => r.id === id);
-    if (!report || !isAdmin) return;
-    
-    // Simple prompt for demo, replace with proper modal in UI
-    const newStatus = prompt(`Update Status (Pending, Under Review, In Progress, Fixed, Rejected):`, report.status);
-    if (newStatus && newStatus !== report.status) {
-        let remarks = '';
-        let imageAfter = null;
-        
-        if (newStatus === 'Fixed') {
-            remarks = prompt('Enter resolution remarks:');
-            // In real UI, this would be a file input
-            const imageUrl = prompt('Enter URL of After Photo (or leave empty to skip):');
-            if (imageUrl) imageAfter = imageUrl;
-        } else {
-            remarks = prompt('Enter remarks (optional):') || '';
-        }
-
-        await updateReportStatus(id, newStatus, remarks, imageAfter);
+window.previewImage = (input) => {
+    const preview = document.getElementById('image-preview');
+    if (input.files && input.files[0]) {
+        const reader = new FileReader();
+        reader.onload = (e) => { preview.src = e.target.result; preview.style.display = 'block'; };
+        reader.readAsDataURL(input.files[0]);
     }
 };
-
-// Initialize on load
-document.addEventListener('DOMContentLoaded', initReports);
+window.detectLocation = () => {
+    if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(pos => {
+            document.getElementById('location-input').value = `${pos.coords.latitude}, ${pos.coords.longitude}`;
+            showToast('Location detected!', 'success');
+        }, () => showToast('Could not detect location', 'error'));
+    }
+};

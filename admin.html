@@ -8,149 +8,112 @@
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        .admin-layout { display: flex; min-height: 100vh; }
-        .sidebar { width: 280px; background: #0f172a; color: white; padding: 1.5rem; position: fixed; height: 100%; overflow-y: auto; }
-        .main-content { flex: 1; margin-left: 280px; padding: 2rem; background: #f1f5f9; }
-        .nav-item { display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem 1rem; color: #94a3b8; text-decoration: none; border-radius: 8px; margin-bottom: 0.5rem; transition: all 0.2s; }
-        .nav-item:hover, .nav-item.active { background: rgba(255,255,255,0.1); color: white; }
-        .stats-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.5rem; margin-bottom: 2rem; }
-        .stat-card { background: white; padding: 1.5rem; border-radius: 12px; box-shadow: var(--shadow-sm); }
-        .chart-container { background: white; padding: 1.5rem; border-radius: 12px; margin-bottom: 2rem; height: 300px; }
-        .reports-table-container { background: white; border-radius: 12px; padding: 1.5rem; box-shadow: var(--shadow-sm); overflow-x: auto; }
-        table { width: 100%; border-collapse: collapse; }
-        th { text-align: left; padding: 1rem; border-bottom: 2px solid #f1f5f9; color: var(--secondary); font-weight: 600; font-size: 0.85rem; text-transform: uppercase; }
-        td { padding: 1rem; border-bottom: 1px solid #f1f5f9; vertical-align: middle; }
-        tr:last-child td { border-bottom: none; }
-        .action-btn { padding: 0.4rem 0.8rem; border-radius: 6px; border: none; cursor: pointer; font-size: 0.8rem; font-weight: 500; transition: all 0.2s; }
-        .btn-view { background: #eff6ff; color: var(--primary); }
-        .btn-view:hover { background: #dbeafe; }
-        
-        /* Modal Specifics */
-        .detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem; }
-        .photo-compare { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 1rem; }
-        .photo-box { text-align: center; }
-        .photo-box img { width: 100%; height: 200px; object-fit: cover; border-radius: 8px; border: 1px solid #e2e8f0; }
-        .photo-label { font-size: 0.85rem; color: var(--secondary); margin-bottom: 0.5rem; display: block; }
+        :root { --primary: #2563eb; --secondary: #64748b; --dark: #0f172a; --light: #f8fafc; --success: #10b981; --warning: #f59e0b; --danger: #ef4444; --radius: 12px; }
+        body { font-family: 'Inter', sans-serif; background: #f1f5f9; margin: 0; color: var(--dark); }
+        .dashboard-layout { display: flex; min-height: 100vh; }
+        .sidebar { width: 280px; background: white; padding: 2rem; border-right: 1px solid #e2e8f0; position: fixed; height: 100%; overflow-y: auto; z-index: 50; }
+        .main-content { flex: 1; margin-left: 280px; padding: 2rem; }
+        .nav-item { display: flex; align-items: center; gap: 0.75rem; padding: 0.875rem 1rem; color: var(--secondary); text-decoration: none; border-radius: var(--radius); margin-bottom: 0.5rem; transition: all 0.2s; font-weight: 500; }
+        .nav-item:hover, .nav-item.active { background: #eff6ff; color: var(--primary); }
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.5rem; margin-bottom: 2rem; }
+        .card { background: white; padding: 1.5rem; border-radius: var(--radius); box-shadow: 0 1px 3px rgba(0,0,0,0.05); border: 1px solid #e2e8f0; }
+        .section { display: none; animation: fadeIn 0.3s ease-out; }
+        .section.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         
         @media (max-width: 768px) {
-            .sidebar { transform: translateX(-100%); z-index: 50; transition: transform 0.3s; }
+            .sidebar { transform: translateX(-100%); transition: transform 0.3s; }
             .sidebar.active { transform: translateX(0); }
             .main-content { margin-left: 0; padding: 1rem; }
-            .detail-grid, .photo-compare { grid-template-columns: 1fr; }
+            .mobile-menu-btn { display: block; position: fixed; top: 1rem; left: 1rem; z-index: 60; background: white; padding: 0.5rem; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); border: none; cursor: pointer; }
         }
+        @media (min-width: 769px) { .mobile-menu-btn { display: none; } }
     </style>
 </head>
 <body>
-    <div class="admin-layout">
-        <!-- Sidebar -->
+    <button class="mobile-menu-btn" onclick="toggleSidebar()"><i class="ph ph-list" style="font-size: 1.5rem;"></i></button>
+
+    <div class="dashboard-layout">
         <aside class="sidebar" id="sidebar">
             <div style="margin-bottom: 2.5rem; display: flex; align-items: center; gap: 0.75rem;">
-                <i class="ph-fill ph-shield-check" style="font-size: 1.75rem; color: #60a5fa;"></i>
-                <h2 style="font-size: 1.25rem; font-weight: 700;">AyosPH Admin</h2>
+                <i class="ph-fill ph-shield-check" style="font-size: 2rem; color: var(--primary);"></i>
+                <div>
+                    <h2 style="font-size: 1.25rem; font-weight: 800; margin: 0; color: var(--dark);">AyosPH</h2>
+                    <p style="font-size: 0.75rem; color: var(--secondary); margin: 0;">Official Portal</p>
+                </div>
             </div>
+            
             <nav>
-                <a href="#" class="nav-item active" onclick="switchTab('overview')"><i class="ph ph-squares-four"></i> Overview</a>
-                <a href="#" class="nav-item" onclick="switchTab('reports')"><i class="ph ph-users"></i> All Reports</a>
-                <a href="#" class="nav-item" onclick="switchTab('users')"><i class="ph ph-user-list"></i> Residents</a>
-                <div style="margin-top: 2rem; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 1rem;">
+                <a href="#" class="nav-item active" onclick="showSection('overview', this)"><i class="ph ph-chart-pie-slice"></i> Overview</a>
+                <a href="#" class="nav-item" onclick="showSection('reports', this)"><i class="ph ph-users"></i> All Reports</a>
+                <div style="margin-top: 2rem; border-top: 1px solid #e2e8f0; padding-top: 1rem;">
                     <a href="#" class="nav-item" onclick="handleLogout()"><i class="ph ph-sign-out"></i> Logout</a>
                 </div>
             </nav>
         </aside>
 
-        <!-- Main Content -->
         <main class="main-content">
-            <!-- Overview Tab -->
-            <div id="overview-tab">
+            <section id="overview" class="section active">
                 <header style="margin-bottom: 2rem;">
-                    <h1 style="font-size: 1.75rem; font-weight: 700; color: var(--dark);">Dashboard Overview</h1>
-                    <p style="color: var(--secondary);">Real-time analytics and community status.</p>
+                    <h1 style="font-size: 1.75rem; font-weight: 800; margin-bottom: 0.5rem;">Dashboard Overview</h1>
+                    <p style="color: var(--secondary);">Monitor community issues and resolution rates.</p>
                 </header>
 
-                <div class="stats-row">
-                    <div class="stat-card">
-                        <p class="text-sm" style="color: var(--secondary);">Total Reports</p>
-                        <h3 class="font-bold" style="font-size: 2rem; color: var(--primary);" id="count-total">0</h3>
+                <div class="stats-grid">
+                    <div class="card">
+                        <p style="color: var(--secondary); font-size: 0.875rem; margin: 0;">Total Reports</p>
+                        <h3 style="font-size: 2rem; font-weight: 800; margin: 0.5rem 0;" id="stat-total">0</h3>
                     </div>
-                    <div class="stat-card">
-                        <p class="text-sm" style="color: var(--secondary);">Pending Action</p>
-                        <h3 class="font-bold" style="font-size: 2rem; color: var(--warning);" id="count-pending">0</h3>
+                    <div class="card">
+                        <p style="color: var(--secondary); font-size: 0.875rem; margin: 0;">Pending Action</p>
+                        <h3 style="font-size: 2rem; font-weight: 800; margin: 0.5rem 0; color: var(--warning);" id="stat-pending">0</h3>
                     </div>
-                    <div class="stat-card">
-                        <p class="text-sm" style="color: var(--secondary);">Resolved</p>
-                        <h3 class="font-bold" style="font-size: 2rem; color: var(--success);" id="count-fixed">0</h3>
+                    <div class="card">
+                        <p style="color: var(--secondary); font-size: 0.875rem; margin: 0;">Resolved</p>
+                        <h3 style="font-size: 2rem; font-weight: 800; margin: 0.5rem 0; color: var(--success);" id="stat-resolved">0</h3>
                     </div>
-                    <div class="stat-card">
-                        <p class="text-sm" style="color: var(--secondary);">Emergencies</p>
-                        <h3 class="font-bold" style="font-size: 2rem; color: var(--danger);" id="count-emergency">0</h3>
+                    <div class="card">
+                        <p style="color: var(--secondary); font-size: 0.875rem; margin: 0;">Emergency</p>
+                        <h3 style="font-size: 2rem; font-weight: 800; margin: 0.5rem 0; color: var(--danger);" id="stat-emergency">0</h3>
                     </div>
                 </div>
 
-                <div class="chart-container">
-                    <canvas id="reportsChart"></canvas>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
+                    <div class="card">
+                        <h3 style="margin-top: 0;">Reports by Category</h3>
+                        <canvas id="categoryChart"></canvas>
+                    </div>
+                    <div class="card">
+                        <h3 style="margin-top: 0;">Monthly Activity</h3>
+                        <canvas id="monthlyChart"></canvas>
+                    </div>
                 </div>
-            </div>
+            </section>
 
-            <!-- Reports Tab -->
-            <div id="reports-tab" class="hidden">
-                <header style="margin-bottom: 2rem; display: flex; justify-content: space-between; align-items: center;">
-                    <h1 style="font-size: 1.75rem; font-weight: 700;">Report Management</h1>
-                    <input type="text" placeholder="Search reports..." class="form-input" style="width: 300px;" onkeyup="filterReports(this.value)">
+            <section id="reports" class="section">
+                <header style="margin-bottom: 2rem;">
+                    <h1 style="font-size: 1.75rem; font-weight: 800; margin: 0;">All Community Reports</h1>
+                    <p style="color: var(--secondary); margin: 0.25rem 0 0 0;">Manage, verify, and resolve citizen submissions.</p>
                 </header>
-                <div class="reports-table-container">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Date</th>
-                                <th>Issue</th>
-                                <th>Category</th>
-                                <th>Severity</th>
-                                <th>Status</th>
-                                <th>Action</th>
-                            </tr>
-                        </thead>
-                        <tbody id="admin-reports-body">
-                            <!-- Populated by JS -->
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-            
-            <!-- Users Tab Placeholder -->
-            <div id="users-tab" class="hidden">
-                <h1>Registered Residents</h1>
-                <p>User management coming soon.</p>
-            </div>
+                <div id="admin-reports-list"></div>
+            </section>
         </main>
-    </div>
-
-    <!-- Report Detail Modal -->
-    <div class="modal-overlay" id="detail-modal">
-        <div class="modal-content" style="max-width: 800px;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
-                <h2 style="font-size: 1.5rem; font-weight: 700;">Report Details</h2>
-                <button onclick="closeDetailModal()" style="background: none; border: none; cursor: pointer;"><i class="ph ph-x" style="font-size: 1.5rem;"></i></button>
-            </div>
-            
-            <div id="modal-body">
-                <!-- Dynamic Content -->
-            </div>
-        </div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="js/supabase.js"></script>
     <script src="js/utils.js"></script>
     <script src="js/auth.js"></script>
+    <script src="js/reports.js"></script>
     <script>
-        let allReports = [];
-        let chartInstance = null;
+        let catChartInst = null;
+        let monChartInst = null;
 
         document.addEventListener('DOMContentLoaded', async () => {
             const session = await getSession();
-            if (!session) window.location.href = 'login.html';
-            
-            // Check Admin Role
+            if (!session) { window.location.href = 'login.html'; return; }
+
+            // Verify Admin Role
             const { data: user } = await window.supabaseClient.from('users').select('role').eq('id', session.user.id).single();
             if (user?.role !== 'admin') {
                 alert('Access Denied: Admins only.');
@@ -158,184 +121,66 @@
                 return;
             }
 
-            await loadAdminData();
+            loadReports(session.user.id, true);
             
-            // Realtime
-            window.supabaseClient.channel('admin_reports')
+            window.supabaseClient.channel('reports')
                 .on('postgres_changes', { event: '*', schema: 'public', table: 'reports' }, () => {
-                    loadAdminData();
+                    loadReports(session.user.id, true);
+                    updateCharts();
                 })
                 .subscribe();
+            
+            updateCharts();
         });
 
-        async function loadAdminData() {
-            const { data, error } = await window.supabaseClient.from('reports').select('*, users(full_name)').order('created_at', { ascending: false });
-            if (error) return console.error(error);
-            
-            allReports = data;
-            renderStats(data);
-            renderTable(data);
-            renderChart(data);
+        function showSection(id, element) {
+            document.querySelectorAll('.section').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+            document.getElementById(id).classList.add('active');
+            element.classList.add('active');
+            if(window.innerWidth <= 768) toggleSidebar();
         }
 
-        function renderStats(reports) {
-            document.getElementById('count-total').innerText = reports.length;
-            document.getElementById('count-pending').innerText = reports.filter(r => r.status === 'Pending').length;
-            document.getElementById('count-fixed').innerText = reports.filter(r => r.status === 'Fixed').length;
-            document.getElementById('count-emergency').innerText = reports.filter(r => r.severity === 'Emergency' && r.status !== 'Fixed').length;
+        function toggleSidebar() {
+            document.getElementById('sidebar').classList.toggle('active');
         }
 
-        function renderTable(reports) {
-            const tbody = document.getElementById('admin-reports-body');
-            tbody.innerHTML = reports.map(r => `
-                <tr>
-                    <td style="color: var(--secondary);">${new Date(r.created_at).toLocaleDateString()}</td>
-                    <td style="font-weight: 500;">${r.title}</td>
-                    <td><span class="badge badge-review">${r.category}</span></td>
-                    <td><span class="badge ${r.severity === 'Emergency' ? 'badge-emergency' : 'badge-pending'}">${r.severity}</span></td>
-                    <td><span class="badge badge-${r.status.toLowerCase().replace(' ', '-')}">${r.status}</span></td>
-                    <td><button class="action-btn btn-view" onclick='openDetailModal(${JSON.stringify(r)})'>Manage</button></td>
-                </tr>
-            `).join('');
-        }
+        async function updateCharts() {
+            const { data } = await window.supabaseClient.from('reports').select('category, created_at, status');
+            if (!data) return;
 
-        function renderChart(reports) {
-            const ctx = document.getElementById('reportsChart').getContext('2d');
-            const categories = {};
-            reports.forEach(r => { categories[r.category] = (categories[r.category] || 0) + 1; });
+            // Category Data
+            const cats = {};
+            data.forEach(r => { cats[r.category] = (cats[r.category] || 0) + 1; });
             
-            if (chartInstance) chartInstance.destroy();
-            
-            chartInstance = new Chart(ctx, {
+            const ctxCat = document.getElementById('categoryChart').getContext('2d');
+            if (catChartInst) catChartInst.destroy();
+            catChartInst = new Chart(ctxCat, {
+                type: 'doughnut',
+                data: {
+                    labels: Object.keys(cats),
+                    datasets: [{ data: Object.values(cats), backgroundColor: ['#2563eb', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#64748b'] }]
+                },
+                options: { responsive: true, plugins: { legend: { position: 'bottom' } } }
+            });
+
+            // Monthly Data (Simplified)
+            const months = {};
+            data.forEach(r => {
+                const m = new Date(r.created_at).toLocaleString('default', { month: 'short' });
+                months[m] = (months[m] || 0) + 1;
+            });
+
+            const ctxMon = document.getElementById('monthlyChart').getContext('2d');
+            if (monChartInst) monChartInst.destroy();
+            monChartInst = new Chart(ctxMon, {
                 type: 'bar',
                 data: {
-                    labels: Object.keys(categories),
-                    datasets: [{
-                        label: 'Reports per Category',
-                        data: Object.values(categories),
-                        backgroundColor: '#2563eb',
-                        borderRadius: 6
-                    }]
+                    labels: Object.keys(months),
+                    datasets: [{ label: 'Reports', data: Object.values(months), backgroundColor: '#2563eb', borderRadius: 6 }]
                 },
-                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+                options: { responsive: true, scales: { y: { beginAtZero: true } } }
             });
-        }
-
-        function switchTab(tab) {
-            document.getElementById('overview-tab').classList.add('hidden');
-            document.getElementById('reports-tab').classList.add('hidden');
-            document.getElementById('users-tab').classList.add('hidden');
-            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
-            
-            document.getElementById(`${tab}-tab`).classList.remove('hidden');
-            event.currentTarget.classList.add('active');
-        }
-
-        function filterReports(query) {
-            const filtered = allReports.filter(r => r.title.toLowerCase().includes(query.toLowerCase()));
-            renderTable(filtered);
-        }
-
-        // Modal Logic
-        function openDetailModal(report) {
-            const modal = document.getElementById('detail-modal');
-            const body = document.getElementById('modal-body');
-            
-            const isFixed = report.status === 'Fixed';
-            const showProofUpload = !isFixed && (report.status === 'In Progress' || report.status === 'Under Review');
-
-            body.innerHTML = `
-                <div class="detail-grid">
-                    <div>
-                        <p class="text-sm" style="color: var(--secondary);">Reported By</p>
-                        <h4 style="font-weight: 600;">${report.users?.full_name || 'Unknown'}</h4>
-                    </div>
-                    <div>
-                        <p class="text-sm" style="color: var(--secondary);">Location</p>
-                        <h4 style="font-weight: 600;">${report.location}</h4>
-                    </div>
-                </div>
-                <div class="form-group">
-                    <p class="form-label">Description</p>
-                    <p>${report.description}</p>
-                </div>
-                <div class="photo-compare">
-                    <div class="photo-box">
-                        <span class="photo-label">Before</span>
-                        <img src="${report.image_before}" alt="Before">
-                    </div>
-                    ${report.image_after ? `
-                    <div class="photo-box">
-                        <span class="photo-label">After (Proof)</span>
-                        <img src="${report.image_after}" alt="After">
-                    </div>` : '<div class="photo-box"><span class="photo-label">After (Proof)</span><div style="height:200px; background:#f1f5f9; border-radius:8px; display:flex; align-items:center; justify-content:center; color:#94a3b8;">No proof yet</div></div>'}
-                </div>
-                
-                <div style="margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid #e2e8f0;">
-                    <label class="form-label">Update Status</label>
-                    <select id="status-select" class="form-select mb-4" onchange="toggleProofInput(this.value)">
-                        <option value="Pending" ${report.status === 'Pending' ? 'selected' : ''}>Pending</option>
-                        <option value="Under Review" ${report.status === 'Under Review' ? 'selected' : ''}>Under Review</option>
-                        <option value="In Progress" ${report.status === 'In Progress' ? 'selected' : ''}>In Progress</option>
-                        <option value="Fixed" ${report.status === 'Fixed' ? 'selected' : ''}>Fixed</option>
-                        <option value="Rejected" ${report.status === 'Rejected' ? 'selected' : ''}>Rejected</option>
-                    </select>
-                    
-                    <div id="proof-upload-section" class="${showProofUpload ? '' : 'hidden'} form-group">
-                        <label class="form-label">Upload Proof of Fix (Required for "Fixed" status)</label>
-                        <input type="file" id="proof-file" class="form-input" accept="image/*">
-                    </div>
-                    
-                    <div class="form-group">
-                        <label class="form-label">Admin Remarks</label>
-                        <textarea id="admin-remarks" class="form-textarea" rows="2">${report.remarks || ''}</textarea>
-                    </div>
-                    
-                    <button class="btn btn-primary w-full" onclick="updateReportStatus('${report.id}')">Update Report</button>
-                </div>
-            `;
-            modal.classList.add('active');
-        }
-
-        function toggleProofInput(status) {
-            const section = document.getElementById('proof-upload-section');
-            if (status === 'Fixed') section.classList.remove('hidden');
-            else section.classList.add('hidden');
-        }
-
-        function closeDetailModal() { document.getElementById('detail-modal').classList.remove('active'); }
-
-        async function updateReportStatus(reportId) {
-            const status = document.getElementById('status-select').value;
-            const remarks = document.getElementById('admin-remarks').value;
-            const proofFile = document.getElementById('proof-file').files[0];
-            
-            if (status === 'Fixed' && !proofFile) {
-                showToast('Please upload proof of fix before marking as Fixed.', 'error');
-                return;
-            }
-
-            let imageUrl = null;
-            if (proofFile) {
-                const fileName = `proof_${Date.now()}_${proofFile.name}`;
-                const { error: uploadError, data } = await window.supabaseClient.storage.from('report-images').upload(fileName, proofFile);
-                if (uploadError) { showToast('Upload failed', 'error'); return; }
-                imageUrl = data.path; // Or public URL logic
-            }
-
-            const updateData = { status, remarks, updated_at: new Date() };
-            if (imageUrl) updateData.image_after = imageUrl;
-            if (status === 'Fixed') updateData.fixed_at = new Date();
-
-            const { error } = await window.supabaseClient.from('reports').update(updateData).eq('id', reportId);
-            
-            if (error) {
-                showToast('Update failed', 'error');
-            } else {
-                showToast('Report updated successfully', 'success');
-                closeDetailModal();
-                loadAdminData();
-            }
         }
     </script>
 </body>

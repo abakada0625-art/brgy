@@ -4,429 +4,135 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Resident Dashboard | AyosPH</title>
-    
-    <!-- Styles -->
     <link rel="stylesheet" href="css/style.css">
-    
-    <!-- Icons -->
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
-    
-    <!-- Google Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-
     <style>
-        :root {
-            --primary: #2563eb;
-            --primary-dark: #1d4ed8;
-            --secondary: #64748b;
-            --success: #10b981;
-            --warning: #f59e0b;
-            --danger: #ef4444;
-            --dark: #0f172a;
-            --light: #f8fafc;
-            --white: #ffffff;
-            --radius: 12px;
-            --shadow-sm: 0 1px 3px rgba(0,0,0,0.1);
-            --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.1);
-            --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.1);
-        }
-
-        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', sans-serif; }
-        
-        body { background-color: #f1f5f9; color: var(--dark); min-height: 100vh; }
-
-        /* Layout */
-        .dashboard-container { display: flex; min-height: 100vh; }
-        
-        /* Sidebar */
-        .sidebar {
-            width: 280px;
-            background: var(--white);
-            border-right: 1px solid #e2e8f0;
-            position: fixed;
-            height: 100vh;
-            overflow-y: auto;
-            z-index: 50;
-            transition: transform 0.3s ease;
-            display: flex;
-            flex-direction: column;
-            padding: 1.5rem;
-        }
-
-        .brand {
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-            margin-bottom: 2.5rem;
-            color: var(--primary);
-        }
-
-        .brand h2 { font-size: 1.5rem; font-weight: 700; letter-spacing: -0.5px; }
-
-        .nav-menu { list-style: none; flex: 1; }
-        
-        .nav-item {
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-            padding: 0.875rem 1rem;
-            color: var(--secondary);
-            text-decoration: none;
-            border-radius: var(--radius);
-            margin-bottom: 0.5rem;
-            font-weight: 500;
-            transition: all 0.2s;
-            cursor: pointer;
-        }
-
-        .nav-item:hover { background: #eff6ff; color: var(--primary); }
-        .nav-item.active { background: var(--primary); color: var(--white); shadow: var(--shadow-md); }
-        .nav-item i { font-size: 1.25rem; }
-
-        .user-profile {
-            background: #f8fafc;
-            padding: 1rem;
-            border-radius: var(--radius);
-            border: 1px solid #e2e8f0;
-        }
-
-        /* Main Content */
-        .main-content {
-            flex: 1;
-            margin-left: 280px;
-            padding: 2rem;
-            transition: margin-left 0.3s ease;
-        }
-
-        /* Sections */
-        .section { display: none; animation: fadeIn 0.4s ease; }
+        :root { --primary: #2563eb; --secondary: #64748b; --dark: #0f172a; --light: #f8fafc; --success: #10b981; --warning: #f59e0b; --danger: #ef4444; --radius: 12px; }
+        body { font-family: 'Inter', sans-serif; background: #f1f5f9; margin: 0; color: var(--dark); }
+        .dashboard-layout { display: flex; min-height: 100vh; }
+        .sidebar { width: 280px; background: white; padding: 2rem; border-right: 1px solid #e2e8f0; position: fixed; height: 100%; overflow-y: auto; z-index: 50; }
+        .main-content { flex: 1; margin-left: 280px; padding: 2rem; }
+        .nav-item { display: flex; align-items: center; gap: 0.75rem; padding: 0.875rem 1rem; color: var(--secondary); text-decoration: none; border-radius: var(--radius); margin-bottom: 0.5rem; transition: all 0.2s; font-weight: 500; }
+        .nav-item:hover, .nav-item.active { background: #eff6ff; color: var(--primary); }
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1.5rem; margin-bottom: 2rem; }
+        .card { background: white; padding: 1.5rem; border-radius: var(--radius); box-shadow: 0 1px 3px rgba(0,0,0,0.05); border: 1px solid #e2e8f0; }
+        .section { display: none; animation: fadeIn 0.3s ease-out; }
         .section.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        /* Stats Grid */
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-            gap: 1.5rem;
-            margin-bottom: 2rem;
-        }
-
-        .stat-card {
-            background: var(--white);
-            padding: 1.5rem;
-            border-radius: var(--radius);
-            box-shadow: var(--shadow-sm);
-            border: 1px solid #e2e8f0;
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-        }
-
-        .stat-icon {
-            width: 56px;
-            height: 56px;
-            border-radius: 12px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.5rem;
-        }
-
-        .stat-icon.blue { background: #eff6ff; color: var(--primary); }
-        .stat-icon.yellow { background: #fef3c7; color: var(--warning); }
-        .stat-icon.green { background: #d1fae5; color: var(--success); }
-        .stat-icon.red { background: #fee2e2; color: var(--danger); }
-
-        /* Report Cards */
-        .report-list { display: flex; flex-direction: column; gap: 1rem; }
-        
-        .report-card {
-            background: var(--white);
-            border-radius: var(--radius);
-            border: 1px solid #e2e8f0;
-            padding: 1.25rem;
-            display: flex;
-            gap: 1.25rem;
-            transition: all 0.2s;
-            cursor: pointer;
-        }
-
-        .report-card:hover {
-            border-color: var(--primary);
-            box-shadow: var(--shadow-md);
-            transform: translateY(-2px);
-        }
-
-        .report-thumb {
-            width: 100px;
-            height: 100px;
-            border-radius: 8px;
-            object-fit: cover;
-            background: #f1f5f9;
-            flex-shrink: 0;
-        }
-
-        .report-details { flex: 1; }
-        
-        .report-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: start;
-            margin-bottom: 0.5rem;
-        }
-
-        .status-badge {
-            padding: 0.25rem 0.75rem;
-            border-radius: 20px;
-            font-size: 0.75rem;
-            font-weight: 600;
-            text-transform: uppercase;
-        }
-        .status-pending { background: #fef3c7; color: var(--warning); }
-        .status-in-progress { background: #dbeafe; color: var(--primary); }
-        .status-fixed { background: #d1fae5; color: var(--success); }
-        .status-rejected { background: #fee2e2; color: var(--danger); }
-
         /* Modal */
-        .modal-overlay {
-            position: fixed;
-            top: 0; left: 0; right: 0; bottom: 0;
-            background: rgba(0,0,0,0.5);
-            backdrop-filter: blur(4px);
-            z-index: 100;
-            display: none;
-            align-items: center;
-            justify-content: center;
-            opacity: 0;
-            transition: opacity 0.3s;
-        }
-
-        .modal-overlay.active { display: flex; opacity: 1; }
-
-        .modal-content {
-            background: var(--white);
-            padding: 2rem;
-            border-radius: var(--radius);
-            width: 100%;
-            max-width: 600px;
-            max-height: 90vh;
-            overflow-y: auto;
-            transform: scale(0.95);
-            transition: transform 0.3s;
-        }
-
-        .modal-overlay.active .modal-content { transform: scale(1); }
-
-        /* Form Elements */
+        .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); display: none; align-items: center; justify-content: center; z-index: 100; backdrop-filter: blur(4px); }
+        .modal-overlay.active { display: flex; }
+        .modal-content { background: white; padding: 2rem; border-radius: 16px; width: 90%; max-width: 600px; max-height: 90vh; overflow-y: auto; }
+        
+        /* Forms */
         .form-group { margin-bottom: 1.25rem; }
-        .form-label { display: block; margin-bottom: 0.5rem; font-weight: 500; color: var(--dark); }
-        .form-input, .form-select, .form-textarea {
-            width: 100%;
-            padding: 0.75rem;
-            border: 1px solid #cbd5e1;
-            border-radius: 8px;
-            font-size: 0.95rem;
-            transition: border-color 0.2s;
-        }
-        .form-input:focus, .form-select:focus, .form-textarea:focus {
-            outline: none;
-            border-color: var(--primary);
-            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
-        }
-
-        /* Buttons */
-        .btn {
-            padding: 0.75rem 1.5rem;
-            border-radius: 8px;
-            font-weight: 500;
-            cursor: pointer;
-            border: none;
-            display: inline-flex;
-            align-items: center;
-            gap: 0.5rem;
-            transition: all 0.2s;
-        }
+        .form-label { display: block; margin-bottom: 0.5rem; font-weight: 500; font-size: 0.9rem; }
+        .form-input, .form-select, .form-textarea { width: 100%; padding: 0.75rem; border: 1px solid #cbd5e1; border-radius: 8px; font-family: inherit; font-size: 0.95rem; transition: border-color 0.2s; }
+        .form-input:focus, .form-select:focus, .form-textarea:focus { outline: none; border-color: var(--primary); ring: 2px solid #eff6ff; }
+        .btn { padding: 0.75rem 1.5rem; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; transition: all 0.2s; display: inline-flex; align-items: center; gap: 0.5rem; }
         .btn-primary { background: var(--primary); color: white; }
-        .btn-primary:hover { background: var(--primary-dark); }
+        .btn-primary:hover { background: #1d4ed8; }
         .btn-outline { background: transparent; border: 1px solid #cbd5e1; color: var(--secondary); }
-        .btn-outline:hover { border-color: var(--dark); color: var(--dark); }
-        .w-full { width: 100%; justify-content: center; }
-
-        /* FAB */
-        .fab {
-            position: fixed;
-            bottom: 2rem;
-            right: 2rem;
-            width: 60px;
-            height: 60px;
-            border-radius: 50%;
-            background: var(--primary);
-            color: white;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.5rem;
-            box-shadow: var(--shadow-lg);
-            cursor: pointer;
-            z-index: 40;
-            transition: transform 0.2s;
-        }
+        .fab { position: fixed; bottom: 2rem; right: 2rem; width: 60px; height: 60px; border-radius: 50%; background: var(--primary); color: white; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; box-shadow: 0 10px 15px -3px rgba(37, 99, 235, 0.3); cursor: pointer; z-index: 40; transition: transform 0.2s; }
         .fab:hover { transform: scale(1.1); }
 
-        /* Mobile Responsive */
-        .mobile-header {
-            display: none;
-            align-items: center;
-            justify-content: space-between;
-            padding: 1rem;
-            background: white;
-            border-bottom: 1px solid #e2e8f0;
-            position: sticky;
-            top: 0;
-            z-index: 40;
-        }
-
         @media (max-width: 768px) {
-            .sidebar { transform: translateX(-100%); }
+            .sidebar { transform: translateX(-100%); transition: transform 0.3s; }
             .sidebar.active { transform: translateX(0); }
             .main-content { margin-left: 0; padding: 1rem; }
-            .mobile-header { display: flex; }
-            .stats-grid { grid-template-columns: 1fr; }
-            .report-card { flex-direction: column; }
-            .report-thumb { width: 100%; height: 200px; }
+            .mobile-menu-btn { display: block; position: fixed; top: 1rem; left: 1rem; z-index: 60; background: white; padding: 0.5rem; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); border: none; cursor: pointer; }
         }
+        @media (min-width: 769px) { .mobile-menu-btn { display: none; } }
     </style>
 </head>
 <body>
+    <button class="mobile-menu-btn" onclick="toggleSidebar()"><i class="ph ph-list" style="font-size: 1.5rem;"></i></button>
 
-    <!-- Mobile Header -->
-    <div class="mobile-header">
-        <div class="brand" style="margin:0;">
-            <i class="ph-fill ph-house-line" style="font-size: 1.5rem;"></i>
-            <h2 style="font-size: 1.25rem;">AyosPH</h2>
-        </div>
-        <button onclick="toggleSidebar()" class="btn btn-outline" style="padding: 0.5rem;">
-            <i class="ph ph-list"></i>
-        </button>
-    </div>
-
-    <div class="dashboard-container">
-        <!-- Sidebar -->
+    <div class="dashboard-layout">
         <aside class="sidebar" id="sidebar">
-            <div class="brand">
-                <i class="ph-fill ph-house-line" style="font-size: 1.75rem;"></i>
-                <h2>AyosPH</h2>
+            <div style="margin-bottom: 2.5rem; display: flex; align-items: center; gap: 0.75rem;">
+                <i class="ph-fill ph-house-line" style="font-size: 2rem; color: var(--primary);"></i>
+                <div>
+                    <h2 style="font-size: 1.25rem; font-weight: 800; margin: 0; color: var(--dark);">AyosPH</h2>
+                    <p style="font-size: 0.75rem; color: var(--secondary); margin: 0;">Resident Portal</p>
+                </div>
             </div>
             
-            <ul class="nav-menu">
-                <li><a class="nav-item active" onclick="showSection('overview', this)"><i class="ph ph-squares-four"></i> Overview</a></li>
-                <li><a class="nav-item" onclick="showSection('reports', this)"><i class="ph ph-file-text"></i> My Reports</a></li>
-                <li><a class="nav-item" onclick="showSection('history', this)"><i class="ph ph-clock-counter-clockwise"></i> History</a></li>
-                <li style="margin-top: auto; border-top: 1px solid #e2e8f0; padding-top: 1rem;">
-                    <a class="nav-item" onclick="handleLogout()"><i class="ph ph-sign-out"></i> Logout</a>
-                </li>
-            </ul>
-
-            <div class="user-profile">
-                <p class="font-bold" id="user-name" style="font-weight: 600; color: var(--dark);">Loading...</p>
-                <p class="text-sm" id="user-barangay" style="color: var(--secondary); font-size: 0.875rem;">Barangay</p>
+            <nav>
+                <a href="#" class="nav-item active" onclick="showSection('overview', this)"><i class="ph ph-squares-four"></i> Overview</a>
+                <a href="#" class="nav-item" onclick="showSection('reports', this)"><i class="ph ph-file-text"></i> My Reports</a>
+                <div style="margin-top: 2rem; border-top: 1px solid #e2e8f0; padding-top: 1rem;">
+                    <a href="#" class="nav-item" onclick="handleLogout()"><i class="ph ph-sign-out"></i> Logout</a>
+                </div>
+            </nav>
+            
+            <div style="margin-top: auto; position: absolute; bottom: 2rem; left: 2rem; right: 2rem;">
+                <div class="card" style="background: #f8fafc; padding: 1rem; border: none;">
+                    <p class="text-sm font-bold" id="user-name" style="margin:0; font-weight:700;">Loading...</p>
+                    <p class="text-sm" style="color: var(--secondary); margin:0.25rem 0 0 0; font-size:0.85rem;" id="user-barangay">Barangay</p>
+                </div>
             </div>
         </aside>
 
-        <!-- Main Content -->
         <main class="main-content">
-            
-            <!-- Overview Section -->
             <section id="overview" class="section active">
                 <header style="margin-bottom: 2rem;">
-                    <h1 style="font-size: 1.75rem; font-weight: 700; color: var(--dark);">Welcome back!</h1>
-                    <p style="color: var(--secondary);">Here's the status of your community reports.</p>
+                    <h1 style="font-size: 1.75rem; font-weight: 800; margin-bottom: 0.5rem;">Welcome back!</h1>
+                    <p style="color: var(--secondary);">Here's the latest status of your community reports.</p>
                 </header>
 
                 <div class="stats-grid">
-                    <div class="stat-card">
-                        <div class="stat-icon blue"><i class="ph ph-file-text"></i></div>
-                        <div>
-                            <p style="color: var(--secondary); font-size: 0.875rem;">Total Reports</p>
-                            <h3 style="font-size: 1.5rem; font-weight: 700;" id="stat-total">0</h3>
+                    <div class="card">
+                        <div style="display: flex; align-items: center; gap: 1rem;">
+                            <div style="padding: 0.75rem; background: #eff6ff; border-radius: 12px; color: var(--primary);"><i class="ph ph-file-text" style="font-size: 1.5rem;"></i></div>
+                            <div><p style="color: var(--secondary); font-size: 0.875rem; margin: 0;">Total Reports</p><h3 style="font-size: 1.5rem; font-weight: 800; margin: 0;" id="stat-total">0</h3></div>
                         </div>
                     </div>
-                    <div class="stat-card">
-                        <div class="stat-icon yellow"><i class="ph ph-clock"></i></div>
-                        <div>
-                            <p style="color: var(--secondary); font-size: 0.875rem;">Pending</p>
-                            <h3 style="font-size: 1.5rem; font-weight: 700;" id="stat-pending">0</h3>
+                    <div class="card">
+                        <div style="display: flex; align-items: center; gap: 1rem;">
+                            <div style="padding: 0.75rem; background: #fef3c7; border-radius: 12px; color: var(--warning);"><i class="ph ph-clock" style="font-size: 1.5rem;"></i></div>
+                            <div><p style="color: var(--secondary); font-size: 0.875rem; margin: 0;">Pending</p><h3 style="font-size: 1.5rem; font-weight: 800; margin: 0;" id="stat-pending">0</h3></div>
                         </div>
                     </div>
-                    <div class="stat-card">
-                        <div class="stat-icon green"><i class="ph ph-check-circle"></i></div>
-                        <div>
-                            <p style="color: var(--secondary); font-size: 0.875rem;">Resolved</p>
-                            <h3 style="font-size: 1.5rem; font-weight: 700;" id="stat-resolved">0</h3>
+                    <div class="card">
+                        <div style="display: flex; align-items: center; gap: 1rem;">
+                            <div style="padding: 0.75rem; background: #d1fae5; border-radius: 12px; color: var(--success);"><i class="ph ph-check-circle" style="font-size: 1.5rem;"></i></div>
+                            <div><p style="color: var(--secondary); font-size: 0.875rem; margin: 0;">Resolved</p><h3 style="font-size: 1.5rem; font-weight: 800; margin: 0;" id="stat-resolved">0</h3></div>
                         </div>
                     </div>
                 </div>
 
-                <h3 style="margin-bottom: 1rem; font-weight: 600; color: var(--dark);">Recent Activity</h3>
-                <div id="recent-reports-container" class="report-list">
-                    <div style="text-align: center; padding: 3rem; color: var(--secondary);">
-                        <i class="ph ph-spinner" style="font-size: 2rem; animation: spin 1s linear infinite;"></i>
-                        <p style="margin-top: 1rem;">Loading reports...</p>
-                    </div>
-                </div>
+                <h3 style="margin-bottom: 1rem; font-weight: 700;">Recent Activity</h3>
+                <div id="recent-reports-container"></div>
             </section>
 
-            <!-- My Reports Section -->
             <section id="reports" class="section">
                 <header style="margin-bottom: 2rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
                     <div>
-                        <h1 style="font-size: 1.75rem; font-weight: 700; color: var(--dark);">My Reports</h1>
-                        <p style="color: var(--secondary);">Track and manage your submissions.</p>
+                        <h1 style="font-size: 1.75rem; font-weight: 800; margin: 0;">My Reports</h1>
+                        <p style="color: var(--secondary); margin: 0.25rem 0 0 0;">Track and manage your submissions.</p>
                     </div>
-                    <button class="btn btn-primary" onclick="openReportModal()">
-                        <i class="ph ph-plus"></i> New Report
-                    </button>
+                    <button class="btn btn-primary" onclick="openReportModal()"><i class="ph ph-plus"></i> New Report</button>
                 </header>
-                
-                <div id="all-reports-container" class="report-list">
-                    <!-- Reports loaded via JS -->
-                </div>
-            </section>
-
-            <!-- History Section -->
-            <section id="history" class="section">
-                <h1 style="font-size: 1.75rem; font-weight: 700; color: var(--dark); margin-bottom: 1rem;">History</h1>
-                <p style="color: var(--secondary); margin-bottom: 1.5rem;">Archive of resolved and rejected reports.</p>
-                <div id="history-container" class="report-list"></div>
+                <div id="all-reports-container"></div>
             </section>
         </main>
     </div>
 
-    <!-- Floating Action Button -->
-    <div class="fab" onclick="openReportModal()">
-        <i class="ph ph-plus"></i>
-    </div>
+    <div class="fab" onclick="openReportModal()"><i class="ph ph-plus"></i></div>
 
-    <!-- Report Modal -->
     <div class="modal-overlay" id="report-modal">
         <div class="modal-content">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
-                <h2 style="font-size: 1.5rem; font-weight: 700; color: var(--dark);">Submit New Report</h2>
-                <button onclick="closeReportModal()" style="background: none; border: none; cursor: pointer; color: var(--secondary);">
-                    <i class="ph ph-x" style="font-size: 1.5rem;"></i>
-                </button>
+                <h2 style="font-size: 1.5rem; font-weight: 800; margin: 0;">Submit Report</h2>
+                <button onclick="closeReportModal()" style="background: none; border: none; cursor: pointer; color: var(--secondary);"><i class="ph ph-x" style="font-size: 1.5rem;"></i></button>
             </div>
-            
             <form id="report-form" onsubmit="handleReportSubmit(event)">
                 <div class="form-group">
                     <label class="form-label">Title</label>
-                    <input type="text" name="title" class="form-input" required placeholder="e.g., Broken Street Light at Corner St.">
+                    <input type="text" name="title" class="form-input" required placeholder="e.g., Broken Street Light on Main St">
                 </div>
-                
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
                     <div class="form-group">
                         <label class="form-label">Category</label>
@@ -439,7 +145,6 @@
                             <option value="Street Lights">Street Lights</option>
                             <option value="Public Safety">Public Safety</option>
                             <option value="Infrastructure">Infrastructure</option>
-                            <option value="Others">Others</option>
                         </select>
                     </div>
                     <div class="form-group">
@@ -452,323 +157,66 @@
                         </select>
                     </div>
                 </div>
-
                 <div class="form-group">
                     <label class="form-label">Description</label>
                     <textarea name="description" class="form-textarea" rows="4" required placeholder="Describe the issue in detail..."></textarea>
                 </div>
-
                 <div class="form-group">
                     <label class="form-label">Location</label>
                     <div style="display: flex; gap: 0.5rem;">
                         <input type="text" name="location" id="location-input" class="form-input" required placeholder="Enter location manually">
-                        <button type="button" class="btn btn-outline" onclick="detectLocation()" title="Use GPS">
-                            <i class="ph ph-crosshair"></i>
-                        </button>
+                        <button type="button" class="btn btn-outline" onclick="detectLocation()"><i class="ph ph-crosshair"></i></button>
                     </div>
                 </div>
-
                 <div class="form-group">
                     <label class="form-label">Photo Evidence</label>
                     <input type="file" name="image" id="image-input" class="form-input" accept="image/*" required onchange="previewImage(this)">
-                    <img id="image-preview" style="width: 100%; height: 200px; object-fit: cover; border-radius: 8px; margin-top: 0.75rem; display: none; border: 1px solid #e2e8f0;" />
+                    <img id="image-preview" style="width: 100%; height: 200px; object-fit: cover; border-radius: 8px; margin-top: 0.5rem; display: none;" />
                 </div>
-
-                <button type="submit" class="btn btn-primary w-full" id="submit-btn">
-                    Submit Report
-                </button>
+                <button type="submit" class="btn btn-primary" style="width: 100%; justify-content: center;">Submit Report</button>
             </form>
         </div>
     </div>
 
-    <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="js/supabase.js"></script>
     <script src="js/utils.js"></script>
     <script src="js/auth.js"></script>
     <script src="js/reports.js"></script>
-    
     <script>
-        let currentUser = null;
-        let currentSession = null;
-
-        // Initialize Dashboard
         document.addEventListener('DOMContentLoaded', async () => {
-            // Check Auth
-            currentSession = await getSession();
-            if (!currentSession) {
+            const session = await getSession();
+            if (!session) {
                 window.location.href = 'login.html';
                 return;
             }
-
-            // Get User Profile
-            try {
-                const { data: user, error } = await window.supabaseClient
-                    .from('users')
-                    .select('*')
-                    .eq('id', currentSession.user.id)
-                    .single();
-
-                if (error) throw error;
-                currentUser = user;
-                
-                // Update UI
-                document.getElementById('user-name').textContent = user.full_name || 'Resident';
-                document.getElementById('user-barangay').textContent = user.barangay || 'Unknown Barangay';
-                
-                // Load Data
-                loadUserReports();
-                
-                // Setup Realtime Listener
-                setupRealtimeListener();
-                
-            } catch (error) {
-                console.error('Error loading user profile:', error);
-                showToast('Failed to load profile', 'error');
+            
+            const { data: user } = await window.supabaseClient.from('users').select('*').eq('id', session.user.id).single();
+            if(user) {
+                document.getElementById('user-name').textContent = user.full_name;
+                document.getElementById('user-barangay').textContent = user.barangay;
             }
+
+            loadReports(session.user.id, false);
+            
+            window.supabaseClient.channel('reports')
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'reports' }, () => {
+                    loadReports(session.user.id, false);
+                })
+                .subscribe();
         });
 
-        // Navigation Logic
-        function showSection(sectionId, element) {
-            // Hide all sections
-            document.querySelectorAll('.section').forEach(sec => sec.classList.remove('active'));
-            // Remove active class from nav items
-            document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
-            
-            // Show target section
-            document.getElementById(sectionId).classList.add('active');
-            // Highlight nav item
-            if(element) element.classList.add('active');
-            
-            // Close sidebar on mobile
-            if(window.innerWidth <= 768) {
-                document.getElementById('sidebar').classList.remove('active');
-            }
+        function showSection(id, element) {
+            document.querySelectorAll('.section').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+            document.getElementById(id).classList.add('active');
+            element.classList.add('active');
+            if(window.innerWidth <= 768) toggleSidebar();
         }
 
         function toggleSidebar() {
             document.getElementById('sidebar').classList.toggle('active');
         }
-
-        // Report Loading Logic
-        async function loadUserReports() {
-            if(!currentUser) return;
-
-            const container = document.getElementById('all-reports-container');
-            const recentContainer = document.getElementById('recent-reports-container');
-            const historyContainer = document.getElementById('history-container');
-            
-            // Show loading state
-            container.innerHTML = '<div style="text-align:center; padding:2rem;"><i class="ph ph-spinner" style="font-size:2rem; animation: spin 1s linear infinite;"></i></div>';
-            
-            try {
-                const { data: reports, error } = await window.supabaseClient
-                    .from('reports')
-                    .select('*')
-                    .eq('reported_by', currentUser.id)
-                    .order('created_at', { ascending: false });
-
-                if (error) throw error;
-
-                // Clear containers
-                container.innerHTML = '';
-                recentContainer.innerHTML = '';
-                historyContainer.innerHTML = '';
-
-                if (!reports || reports.length === 0) {
-                    container.innerHTML = '<div style="text-align:center; padding:3rem; color:var(--secondary);"><i class="ph ph-folder-open" style="font-size:3rem; margin-bottom:1rem;"></i><p>No reports yet. Create your first report!</p></div>';
-                    recentContainer.innerHTML = '<div style="text-align:center; padding:2rem; color:var(--secondary);">No recent activity.</div>';
-                    updateStats([]);
-                    return;
-                }
-
-                // Render Reports
-                reports.forEach(report => {
-                    const card = createReportCard(report);
-                    
-                    // Add to "My Reports"
-                    container.appendChild(card.cloneNode(true));
-                    
-                    // Add to "Recent" (limit to 3)
-                    if (recentContainer.children.length < 3) {
-                        recentContainer.appendChild(card.cloneNode(true));
-                    }
-
-                    // Add to "History" if Fixed or Rejected
-                    if (report.status === 'Fixed' || report.status === 'Rejected') {
-                        historyContainer.appendChild(card.cloneNode(true));
-                    }
-                });
-
-                updateStats(reports);
-
-            } catch (error) {
-                console.error('Error loading reports:', error);
-                container.innerHTML = '<div style="text-align:center; color:var(--danger);">Failed to load reports. Please refresh.</div>';
-            }
-        }
-
-        function createReportCard(report) {
-            const div = document.createElement('div');
-            div.className = 'report-card';
-            
-            const statusClass = `status-${report.status.toLowerCase().replace(' ', '-')}`;
-            const imageUrl = report.image_before || 'https://via.placeholder.com/100?text=No+Image';
-            
-            div.innerHTML = `
-                <img src="${imageUrl}" alt="Report Image" class="report-thumb" onerror="this.src='https://via.placeholder.com/100?text=Error'">
-                <div class="report-details">
-                    <div class="report-header">
-                        <h4 style="font-weight: 600; color: var(--dark);">${report.title}</h4>
-                        <span class="status-badge ${statusClass}">${report.status}</span>
-                    </div>
-                    <p style="color: var(--secondary); font-size: 0.875rem; margin-bottom: 0.5rem;">
-                        <i class="ph ph-tag"></i> ${report.category} • <i class="ph ph-warning"></i> ${report.severity}
-                    </p>
-                    <p style="color: var(--secondary); font-size: 0.875rem; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">
-                        ${report.description}
-                    </p>
-                    <div style="margin-top: 0.75rem; font-size: 0.75rem; color: var(--secondary);">
-                        <i class="ph ph-map-pin"></i> ${report.location} • ${new Date(report.created_at).toLocaleDateString()}
-                    </div>
-                </div>
-            `;
-            return div;
-        }
-
-        function updateStats(reports) {
-            const total = reports.length;
-            const pending = reports.filter(r => r.status === 'Pending' || r.status === 'Under Review').length;
-            const resolved = reports.filter(r => r.status === 'Fixed').length;
-
-            document.getElementById('stat-total').textContent = total;
-            document.getElementById('stat-pending').textContent = pending;
-            document.getElementById('stat-resolved').textContent = resolved;
-        }
-
-        function setupRealtimeListener() {
-            window.supabaseClient.channel('public:reports')
-                .on('postgres_changes', 
-                    { event: '*', schema: 'public', table: 'reports' }, 
-                    () => {
-                        // Reload reports when changes occur
-                        loadUserReports();
-                    }
-                )
-                .subscribe();
-        }
-
-        // Modal Functions
-        function openReportModal() {
-            document.getElementById('report-modal').classList.add('active');
-        }
-
-        function closeReportModal() {
-            document.getElementById('report-modal').classList.remove('active');
-            document.getElementById('report-form').reset();
-            document.getElementById('image-preview').style.display = 'none';
-        }
-
-        function previewImage(input) {
-            const preview = document.getElementById('image-preview');
-            if (input.files && input.files[0]) {
-                const reader = new FileReader();
-                reader.onload = (e) => {
-                    preview.src = e.target.result;
-                    preview.style.display = 'block';
-                };
-                reader.readAsDataURL(input.files[0]);
-            }
-        }
-
-        function detectLocation() {
-            const locInput = document.getElementById('location-input');
-            if (navigator.geolocation) {
-                locInput.placeholder = "Detecting location...";
-                navigator.geolocation.getCurrentPosition(
-                    (pos) => {
-                        locInput.value = `${pos.coords.latitude}, ${pos.coords.longitude}`;
-                        showToast('Location detected!', 'success');
-                    },
-                    () => {
-                        locInput.placeholder = "Enter location manually";
-                        showToast('Could not detect location', 'error');
-                    }
-                );
-            } else {
-                showToast('Geolocation not supported', 'error');
-            }
-        }
-
-        // Handle Report Submission
-        async function handleReportSubmit(e) {
-            e.preventDefault();
-            
-            const submitBtn = document.getElementById('submit-btn');
-            const originalText = submitBtn.innerHTML;
-            submitBtn.disabled = true;
-            submitBtn.innerHTML = '<i class="ph ph-spinner" style="animation: spin 1s linear infinite;"></i> Submitting...';
-
-            const formData = new FormData(e.target);
-            const file = formData.get('image');
-
-            try {
-                let imageUrl = null;
-
-                // Upload Image if exists
-                if (file) {
-                    const fileName = `${Date.now()}_${file.name.replace(/\s/g, '_')}`;
-                    const { data: uploadData, error: uploadError } = await window.supabaseClient
-                        .storage
-                        .from('report-images')
-                        .upload(fileName, file);
-
-                    if (uploadError) throw uploadError;
-                    
-                    // Get public URL
-                    const { data: { publicUrl } } = window.supabaseClient
-                        .storage
-                        .from('report-images')
-                        .getPublicUrl(fileName);
-                    
-                    imageUrl = publicUrl;
-                }
-
-                // Insert Report
-                const { error: insertError } = await window.supabaseClient
-                    .from('reports')
-                    .insert({
-                        title: formData.get('title'),
-                        category: formData.get('category'),
-                        severity: formData.get('severity'),
-                        description: formData.get('description'),
-                        location: formData.get('location'),
-                        image_before: imageUrl,
-                        status: 'Pending',
-                        reported_by: currentUser.id
-                    });
-
-                if (insertError) throw insertError;
-
-                showToast('Report submitted successfully!', 'success');
-                closeReportModal();
-                loadUserReports(); // Refresh list
-
-            } catch (error) {
-                console.error('Submission error:', error);
-                showToast(error.message || 'Failed to submit report', 'error');
-            } finally {
-                submitBtn.disabled = false;
-                submitBtn.innerHTML = originalText;
-            }
-        }
-
-        // CSS Animation for spinner
-        const style = document.createElement('style');
-        style.innerHTML = `
-            @keyframes spin { 100% { transform: rotate(360deg); } }
-        `;
-        document.head.appendChild(style);
     </script>
 </body>
 </html>
