@@ -12,31 +12,22 @@ async function loadReports(userId, isAdmin = false) {
     
     if (!container) return;
 
-    // Show Loading State
-    container.innerHTML = '<div style="text-align:center; padding:3rem; color:var(--secondary);"><i class="ph ph-spinner ph-spin" style="font-size:2rem;"></i><p>Loading reports...</p></div>';
+    // Show loading state
+    container.innerHTML = '<div style="text-align:center; padding:2rem;"><i class="ph ph-spinner ph-spin" style="font-size:2rem; color:var(--primary);"></i><p style="margin-top:0.5rem">Loading reports...</p></div>';
 
     try {
-        let query;
-
-        if (isAdmin) {
-            // Admin sees ALL reports, joined with the reporter's name
-            query = window.supabaseClient
-                .from('reports')
-                .select(`
-                    *,
-                    reporter:users!${REPORTED_BY_FK} (full_name, email)
-                `)
-                .order('created_at', { ascending: false });
-        } else {
-            // Resident sees ONLY their own reports
-            query = window.supabaseClient
-                .from('reports')
-                .select(`
-                    *,
-                    reporter:users!${REPORTED_BY_FK} (full_name)
-                `)
-                .eq('reported_by', userId)
-                .order('created_at', { ascending: false });
+        // FIX: Explicitly specify the foreign key 'reported_by' for the join
+        // Syntax: table!foreign_key_column(column_names)
+        let query = window.supabaseClient
+            .from('reports')
+            .select(`
+                *,
+                users!reported_by(full_name, email)
+            `)
+            .order('created_at', { ascending: false });
+        
+        if (!isAdmin) {
+            query = query.eq('reported_by', userId);
         }
 
         const { data, error } = await query;
@@ -47,13 +38,13 @@ async function loadReports(userId, isAdmin = false) {
         }
 
         container.innerHTML = '';
-
+        
         if (!data || data.length === 0) {
             container.innerHTML = `
                 <div style="text-align:center; padding:3rem; color:var(--secondary);">
                     <i class="ph ph-folder-open" style="font-size:3rem; margin-bottom:1rem; opacity:0.5;"></i>
-                    <p>No reports found.</p>
-                    ${!isAdmin ? '<button class="btn btn-primary" style="margin-top:1rem;" onclick="openReportModal()">Create First Report</button>' : ''}
+                    <p>No reports found yet.</p>
+                    ${!isAdmin ? '<button onclick="openReportModal()" class="btn btn-primary" style="margin-top:1rem;">Create First Report</button>' : ''}
                 </div>`;
             
             if(recentContainer) recentContainer.innerHTML = container.innerHTML;
@@ -63,9 +54,7 @@ async function loadReports(userId, isAdmin = false) {
 
         // Render Full List
         data.forEach(report => {
-            // Map 'reporter' alias back to 'users' for the card creator function
-            const reportWithUser = { ...report, users: report.reporter };
-            const card = createReportCard(reportWithUser, isAdmin);
+            const card = createReportCard(report, isAdmin);
             container.insertAdjacentHTML('beforeend', card);
         });
 
@@ -73,8 +62,7 @@ async function loadReports(userId, isAdmin = false) {
         if (recentContainer) {
             recentContainer.innerHTML = '';
             data.slice(0, 3).forEach(report => {
-                const reportWithUser = { ...report, users: report.reporter };
-                recentContainer.insertAdjacentHTML('beforeend', createReportCard(reportWithUser, false, true));
+                recentContainer.insertAdjacentHTML('beforeend', createReportCard(report, false, true));
             });
         }
 
@@ -85,9 +73,8 @@ async function loadReports(userId, isAdmin = false) {
         container.innerHTML = `
             <div style="text-align:center; padding:2rem; color:#ef4444; background:#fef2f2; border-radius:8px;">
                 <i class="ph ph-warning-circle" style="font-size:2rem;"></i>
-                <p><strong>Error loading reports</strong></p>
+                <p style="margin-top:0.5rem; font-weight:600;">Error loading reports</p>
                 <p style="font-size:0.85rem;">${error.message}</p>
-                <button class="btn btn-outline" style="margin-top:1rem;" onclick="location.reload()">Retry</button>
             </div>`;
     }
 }
