@@ -4,18 +4,26 @@
  * Handles user authentication, registration, and session management.
  */
 
-// Load Supabase client script if not already loaded
-if (typeof supabase === 'undefined') {
-    document.write('<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>');
+// IMPORTANT: Ensure supabase.js is loaded BEFORE this file in HTML
+// We access the client via window.supabaseClient which is set in supabase.js
+
+/**
+ * Get Supabase Client safely
+ */
+function getSupabase() {
+    if (!window.supabaseClient) {
+        console.error('❌ Supabase client not found! Ensure js/supabase.js is loaded first.');
+        throw new Error('Supabase client not initialized');
+    }
+    return window.supabaseClient;
 }
 
 /**
  * Handle user login
- * @param {string} email - User email
- * @param {string} password - User password
- * @param {boolean} remember - Whether to remember the user
  */
 async function handleLogin(email, password, remember = false) {
+    const _supabase = getSupabase();
+    
     try {
         const { data, error } = await _supabase.auth.signInWithPassword({
             email,
@@ -25,15 +33,26 @@ async function handleLogin(email, password, remember = false) {
         if (error) throw error;
 
         // Get user profile
-        const { data: userProfile } = await _supabase
+        const { data: userProfile, error: profileError } = await _supabase
             .from('users')
             .select('*')
             .eq('id', data.user.id)
             .single();
 
+        if (profileError && profileError.code !== 'PGRST116') { // PGRST116 means no rows returned
+            throw profileError;
+        }
+
         if (!userProfile) {
             // Create user profile if it doesn't exist
             await createUserProfile(data.user);
+            // Fetch again after creation
+            const { data: newUserProfile } = await _supabase
+                .from('users')
+                .select('*')
+                .eq('id', data.user.id)
+                .single();
+            userProfile = newUserProfile;
         }
 
         showToast('Welcome back!', 'success');
@@ -49,26 +68,31 @@ async function handleLogin(email, password, remember = false) {
 
     } catch (error) {
         console.error('Login error:', error);
+        showToast(error.message || 'Login failed', 'error');
         throw error;
     }
 }
 
 /**
  * Handle user registration
- * @param {string} fullName - User's full name
- * @param {string} email - User's email
- * @param {string} barangay - User's barangay
- * @param {string} contactNumber - User's contact number
- * @param {string} password - User's password
  */
 async function handleRegister(fullName, email, barangay, contactNumber, password) {
+    const _supabase = getSupabase();
+
     try {
-        const { data, error } = await _supabase.auth.signUp({
+        const { data, error: authError } = await _supabase.auth.signUp({
             email,
-            password
+            password,
+            options: {
+                data: {
+                    full_name: fullName,
+                    barangay: barangay,
+                    contact_number: contactNumber
+                }
+            }
         });
 
-        if (error) throw error;
+        if (authError) throw authError;
 
         // Create user profile in database
         const { error: profileError } = await _supabase
@@ -92,15 +116,17 @@ async function handleRegister(fullName, email, barangay, contactNumber, password
 
     } catch (error) {
         console.error('Registration error:', error);
+        showToast(error.message || 'Registration failed', 'error');
         throw error;
     }
 }
 
 /**
  * Create user profile in database
- * @param {Object} user - Supabase auth user
  */
 async function createUserProfile(user) {
+    const _supabase = getSupabase();
+
     try {
         const { error } = await _supabase
             .from('users')
@@ -124,6 +150,8 @@ async function createUserProfile(user) {
  * Handle user logout
  */
 async function handleLogout() {
+    const _supabase = getSupabase();
+
     try {
         const { error } = await _supabase.auth.signOut();
         if (error) throw error;
@@ -142,10 +170,10 @@ async function handleLogout() {
 
 /**
  * Check authentication state and redirect if needed
- * @param {boolean} requireAuth - Whether authentication is required
- * @param {boolean} redirectIfAuth - Whether to redirect if already authenticated
  */
 async function checkAuthState(requireAuth = false, redirectIfAuth = false) {
+    const _supabase = getSupabase();
+
     try {
         const { data: { session } } = await _supabase.auth.getSession();
         const currentPage = window.location.pathname.split('/').pop();
@@ -184,9 +212,9 @@ async function checkAuthState(requireAuth = false, redirectIfAuth = false) {
 
 /**
  * Get current session
- * @returns {Promise<Object|null>} Current session or null
  */
 async function getSession() {
+    const _supabase = getSupabase();
     try {
         const { data: { session } } = await _supabase.auth.getSession();
         return session;
@@ -197,10 +225,32 @@ async function getSession() {
 }
 
 /**
+ * Get current user
+ */
+async function getCurrentUser() {
+    const _supabase = getSupabase();
+    try {
+        const { data: { user } } = await _supabase.auth.getUser();
+        return user;
+    } catch (error) {
+        console.error('Error getting user:', error);
+        return null;
+    }
+}
+
+/**
+ * Check if user is logged in
+ */
+async function isLoggedIn() {
+    const session = await getSession();
+    return !!session;
+}
+
+/**
  * Update user profile
- * @param {Object} updates - Fields to update
  */
 async function updateUserProfile(updates) {
+    const _supabase = getSupabase();
     try {
         const { data: { user } } = await _supabase.auth.getUser();
         if (!user) throw new Error('Not authenticated');
@@ -221,9 +271,9 @@ async function updateUserProfile(updates) {
 
 /**
  * Reset password
- * @param {string} email - User's email
  */
 async function resetPassword(email) {
+    const _supabase = getSupabase();
     try {
         const { error } = await _supabase.auth.resetPasswordForEmail(email, {
             redirectTo: `${window.location.origin}/login.html`
@@ -240,15 +290,15 @@ async function resetPassword(email) {
 
 /**
  * Listen for auth state changes
- * @param {Function} callback - Callback function
  */
 function onAuthStateChange(callback) {
+    const _supabase = getSupabase();
     _supabase.auth.onAuthStateChange((event, session) => {
         callback(event, session);
     });
 }
 
-// Export functions
+// Export functions to window
 window.handleLogin = handleLogin;
 window.handleRegister = handleRegister;
 window.handleLogout = handleLogout;
@@ -259,3 +309,4 @@ window.resetPassword = resetPassword;
 window.onAuthStateChange = onAuthStateChange;
 window.getCurrentUser = getCurrentUser;
 window.isLoggedIn = isLoggedIn;
+window.getSupabase = getSupabase;
