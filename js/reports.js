@@ -13,16 +13,19 @@ async function loadReports(userId, isAdmin = false) {
     if (!container) return;
 
     // Show loading state
-    container.innerHTML = '<div style="text-align:center; padding:2rem;"><i class="ph ph-spinner ph-spin" style="font-size:2rem; color:var(--primary);"></i><p style="margin-top:0.5rem">Loading reports...</p></div>';
+    container.innerHTML = '<div style="text-align:center; padding:2rem;"><i class="ph ph-spinner ph-spin" style="font-size:2rem; color:var(--primary);"></i><p style="margin-top:1rem;">Loading reports...</p></div>';
 
     try {
-        // FIX: Explicitly specify the foreign key 'reported_by' for the join
-        // Syntax: table!foreign_key_column(column_names)
+        // EXPLICIT JOIN SYNTAX: users!reported_by(full_name)
+        // This tells Supabase exactly which column to use for the join
         let query = window.supabaseClient
             .from('reports')
             .select(`
                 *,
-                users!reported_by(full_name, email)
+                users!reported_by (
+                    full_name,
+                    email
+                )
             `)
             .order('created_at', { ascending: false });
         
@@ -33,19 +36,18 @@ async function loadReports(userId, isAdmin = false) {
         const { data, error } = await query;
 
         if (error) {
-            console.error("Supabase Error:", error);
+            console.error("Supabase Error Details:", error);
             throw error;
         }
 
         container.innerHTML = '';
         
         if (!data || data.length === 0) {
-            container.innerHTML = `
-                <div style="text-align:center; padding:3rem; color:var(--secondary);">
-                    <i class="ph ph-folder-open" style="font-size:3rem; margin-bottom:1rem; opacity:0.5;"></i>
-                    <p>No reports found yet.</p>
-                    ${!isAdmin ? '<button onclick="openReportModal()" class="btn btn-primary" style="margin-top:1rem;">Create First Report</button>' : ''}
-                </div>`;
+            container.innerHTML = `<div style="text-align:center; padding:3rem; color:var(--secondary);">
+                <i class="ph ph-folder-open" style="font-size:3rem; margin-bottom:1rem; opacity:0.5;"></i>
+                <p>No reports found yet.</p>
+                ${!isAdmin ? '<button class="btn btn-primary" style="margin-top:1rem;" onclick="openReportModal()">Create First Report</button>' : ''}
+            </div>`;
             
             if(recentContainer) recentContainer.innerHTML = container.innerHTML;
             updateStats([]);
@@ -70,12 +72,11 @@ async function loadReports(userId, isAdmin = false) {
 
     } catch (error) {
         console.error('Error loading reports:', error);
-        container.innerHTML = `
-            <div style="text-align:center; padding:2rem; color:#ef4444; background:#fef2f2; border-radius:8px;">
-                <i class="ph ph-warning-circle" style="font-size:2rem;"></i>
-                <p style="margin-top:0.5rem; font-weight:600;">Error loading reports</p>
-                <p style="font-size:0.85rem;">${error.message}</p>
-            </div>`;
+        container.innerHTML = `<div style="text-align:center; padding:2rem; color:#ef4444;">
+            <i class="ph ph-warning-circle" style="font-size:2rem;"></i>
+            <p style="margin-top:0.5rem;">Error: ${error.message}</p>
+            <button class="btn btn-outline" style="margin-top:1rem;" onclick="location.reload()">Retry</button>
+        </div>`;
     }
 }
 
