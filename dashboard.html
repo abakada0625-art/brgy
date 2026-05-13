@@ -4,236 +4,180 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Resident Dashboard | AyosPH</title>
-    
-    <!-- Fonts & Icons -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <script src="https://unpkg.com/@phosphor-icons/web"></script>
-    
-    <!-- Styles -->
     <link rel="stylesheet" href="css/style.css">
     <link rel="stylesheet" href="css/dashboard.css">
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
 </head>
 <body>
-
-    <div class="dashboard-container">
-        <!-- Sidebar -->
-        <aside class="sidebar">
-            <div class="logo">
-                <i class="ph ph-house-line"></i>
-                <span>AyosPH</span>
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+        <div class="logo">
+            <i class="ph ph-house-line"></i>
+            <span>AyosPH</span>
+        </div>
+        <nav class="nav-links">
+            <a href="#" class="nav-item active" data-target="overview">
+                <i class="ph ph-squares-four"></i> Overview
+            </a>
+            <a href="#" class="nav-item" data-target="my-reports">
+                <i class="ph ph-list-dashes"></i> My Reports
+            </a>
+            <a href="#" class="nav-item" data-target="history">
+                <i class="ph ph-clock-counter-clockwise"></i> History
+            </a>
+            <a href="#" class="nav-item" data-target="settings">
+                <i class="ph ph-gear"></i> Settings
+            </a>
+        </nav>
+        <div class="user-profile">
+            <div class="avatar" id="userAvatar">R</div>
+            <div class="user-info">
+                <p class="name" id="userName">Resident</p>
+                <p class="role">Barangay Resident</p>
             </div>
-            
-            <nav class="nav-menu">
-                <a href="#" class="nav-item active" data-section="overview">
-                    <i class="ph ph-squares-four"></i>
-                    <span>Overview</span>
-                </a>
-                <a href="#" class="nav-item" data-section="reports">
-                    <i class="ph ph-file-text"></i>
-                    <span>My Reports</span>
-                </a>
-                <a href="#" class="nav-item" data-section="history">
-                    <i class="ph ph-clock-counter-clockwise"></i>
-                    <span>History</span>
-                </a>
-                <a href="#" class="nav-item" data-section="settings">
-                    <i class="ph ph-gear"></i>
-                    <span>Settings</span>
-                </a>
-            </nav>
+            <button class="btn-logout" onclick="handleLogout()"><i class="ph ph-sign-out"></i></button>
+        </div>
+    </aside>
 
-            <div class="sidebar-footer">
-                <button id="logoutBtn" class="nav-item logout-btn">
-                    <i class="ph ph-sign-out"></i>
-                    <span>Logout</span>
+    <!-- Main Content -->
+    <main class="main-content">
+        <!-- Header -->
+        <header class="top-bar">
+            <button class="mobile-menu-btn" id="mobileMenuBtn"><i class="ph ph-list"></i></button>
+            <h1 id="pageTitle">Overview</h1>
+            <div class="actions">
+                <button class="btn btn-primary" onclick="openReportModal()">
+                    <i class="ph ph-plus-circle"></i> New Report
                 </button>
             </div>
-        </aside>
+        </header>
 
-        <!-- Main Content -->
-        <main class="main-content">
-            <!-- Top Header -->
-            <header class="top-header">
-                <div class="header-left">
-                    <button class="mobile-menu-btn"><i class="ph ph-list"></i></button>
-                    <h2 id="pageTitle">Overview</h2>
-                </div>
-                <div class="header-right">
-                    <button class="btn-primary" id="createReportBtn">
-                        <i class="ph ph-plus-circle"></i>
-                        <span>New Report</span>
-                    </button>
-                    <div class="user-profile">
-                        <div class="avatar" id="userAvatar">U</div>
-                        <div class="user-info">
-                            <span class="user-name" id="userName">Loading...</span>
-                            <span class="user-role" id="userRole">Resident</span>
+        <!-- Sections -->
+        <div class="content-area">
+            <!-- Overview Section -->
+            <section id="overview" class="section active">
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="icon-box bg-blue"><i class="ph ph-file-text"></i></div>
+                        <div>
+                            <h3 id="statTotal">0</h3>
+                            <p>Total Reports</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="icon-box bg-yellow"><i class="ph ph-clock"></i></div>
+                        <div>
+                            <h3 id="statPending">0</h3>
+                            <p>Pending</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="icon-box bg-green"><i class="ph ph-check-circle"></i></div>
+                        <div>
+                            <h3 id="statFixed">0</h3>
+                            <p>Resolved</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="icon-box bg-red"><i class="ph ph-warning"></i></div>
+                        <div>
+                            <h3 id="statEmergency">0</h3>
+                            <p>Emergencies</p>
                         </div>
                     </div>
                 </div>
-            </header>
 
-            <!-- Dynamic Content Area -->
-            <div class="content-area">
-                
-                <!-- Overview Section -->
-                <section id="overview" class="content-section active">
-                    <div class="stats-grid">
-                        <div class="stat-card">
-                            <div class="stat-icon blue"><i class="ph ph-file-text"></i></div>
-                            <div class="stat-details">
-                                <h3 id="totalReports">0</h3>
-                                <p>Total Reports</p>
-                            </div>
-                        </div>
-                        <div class="stat-card">
-                            <div class="stat-icon yellow"><i class="ph ph-clock"></i></div>
-                            <div class="stat-details">
-                                <h3 id="pendingReports">0</h3>
-                                <p>Pending</p>
-                            </div>
-                        </div>
-                        <div class="stat-card">
-                            <div class="stat-icon green"><i class="ph ph-check-circle"></i></div>
-                            <div class="stat-details">
-                                <h3 id="fixedReports">0</h3>
-                                <p>Resolved</p>
-                            </div>
-                        </div>
-                        <div class="stat-card">
-                            <div class="stat-icon red"><i class="ph ph-warning"></i></div>
-                            <div class="stat-details">
-                                <h3 id="emergencyReports">0</h3>
-                                <p>Emergencies</p>
-                            </div>
-                        </div>
+                <div class="recent-reports">
+                    <h2>Recent Activity</h2>
+                    <div id="recentReportsList" class="reports-list">
+                        <!-- Populated by JS -->
+                        <div class="loading-state"><div class="spinner"></div> Loading...</div>
                     </div>
+                </div>
+            </section>
 
-                    <div class="recent-reports">
-                        <div class="section-header">
-                            <h3>Recent Activity</h3>
-                            <a href="#" class="view-all" data-target="reports">View All</a>
-                        </div>
-                        <div id="recentReportsList" class="reports-grid">
-                            <!-- Loaded via JS -->
-                            <div class="loading-state">Loading reports...</div>
-                        </div>
-                    </div>
-                </section>
+            <!-- My Reports Section -->
+            <section id="my-reports" class="section hidden">
+                <div class="filters-bar">
+                    <input type="text" id="searchInput" class="form-input" placeholder="Search reports..." style="max-width: 300px;">
+                    <select id="statusFilter" class="form-select" style="max-width: 200px;">
+                        <option value="all">All Statuses</option>
+                        <option value="Pending">Pending</option>
+                        <option value="Under Review">Under Review</option>
+                        <option value="In Progress">In Progress</option>
+                        <option value="Fixed">Fixed</option>
+                        <option value="Rejected">Rejected</option>
+                    </select>
+                </div>
+                <div id="allReportsList" class="reports-grid">
+                    <!-- Populated by JS -->
+                </div>
+            </section>
 
-                <!-- My Reports Section -->
-                <section id="reports" class="content-section">
-                    <div class="filters-bar">
-                        <div class="search-box">
-                            <i class="ph ph-magnifying-glass"></i>
-                            <input type="text" id="searchInput" placeholder="Search reports...">
-                        </div>
-                        <select id="filterStatus">
-                            <option value="all">All Status</option>
-                            <option value="Pending">Pending</option>
-                            <option value="Under Review">Under Review</option>
-                            <option value="In Progress">In Progress</option>
-                            <option value="Fixed">Fixed</option>
-                            <option value="Rejected">Rejected</option>
-                        </select>
-                    </div>
-                    <div id="allReportsList" class="reports-list">
-                        <!-- Loaded via JS -->
-                    </div>
-                </section>
+            <!-- History & Settings placeholders -->
+            <section id="history" class="section hidden"><h2>Report History</h2><p>Full archive of your submissions.</p></section>
+            <section id="settings" class="section hidden"><h2>Account Settings</h2><p>Manage your profile and preferences.</p></section>
+        </div>
+    </main>
 
-                <!-- History Section (Placeholder) -->
-                <section id="history" class="content-section">
-                    <div class="empty-state">
-                        <i class="ph ph-clock-counter-clockwise"></i>
-                        <h3>History Archive</h3>
-                        <p>Older reports will appear here.</p>
-                    </div>
-                </section>
-
-                 <!-- Settings Section (Placeholder) -->
-                 <section id="settings" class="content-section">
-                    <div class="empty-state">
-                        <i class="ph ph-gear"></i>
-                        <h3>Settings</h3>
-                        <p>Profile settings coming soon.</p>
-                    </div>
-                </section>
-            </div>
-        </main>
-    </div>
-
-    <!-- Create Report Modal -->
-    <div id="reportModal" class="modal">
-        <div class="modal-content large">
+    <!-- New Report Modal -->
+    <div class="modal-overlay" id="reportModal">
+        <div class="modal-content">
             <div class="modal-header">
-                <h3>Submit New Report</h3>
-                <button class="close-modal">&times;</button>
+                <h2 class="modal-title">Submit New Report</h2>
+                <button class="modal-close" onclick="closeReportModal()">&times;</button>
             </div>
             <form id="reportForm">
-                <div class="form-grid">
-                    <div class="form-group full-width">
-                        <label>Title</label>
-                        <input type="text" id="reportTitle" required placeholder="e.g., Broken street light at Corner St.">
-                    </div>
-                    
-                    <div class="form-group">
-                        <label>Category</label>
-                        <select id="reportCategory" required>
-                            <option value="">Select Category</option>
-                            <option value="Roads">Roads</option>
-                            <option value="Garbage">Garbage</option>
-                            <option value="Drainage">Drainage</option>
-                            <option value="Flooding">Flooding</option>
-                            <option value="Street Lights">Street Lights</option>
-                            <option value="Public Safety">Public Safety</option>
-                            <option value="Infrastructure">Infrastructure</option>
-                            <option value="Others">Others</option>
-                        </select>
-                    </div>
-
-                    <div class="form-group">
-                        <label>Severity</label>
-                        <select id="reportSeverity" required>
-                            <option value="Low">Low</option>
-                            <option value="Medium">Medium</option>
-                            <option value="High">High</option>
-                            <option value="Emergency">Emergency</option>
-                        </select>
-                    </div>
-
-                    <div class="form-group full-width">
-                        <label>Description</label>
-                        <textarea id="reportDescription" rows="4" required placeholder="Describe the issue in detail..."></textarea>
-                    </div>
-
-                    <div class="form-group full-width">
-                        <label>Location</label>
-                        <div class="location-input-group">
-                            <input type="text" id="reportLocation" required placeholder="Enter location manually or use GPS">
-                            <button type="button" id="gpsBtn" class="btn-secondary"><i class="ph ph-crosshair"></i> Use GPS</button>
-                        </div>
-                    </div>
-
-                    <div class="form-group full-width">
-                        <label>Upload Photo</label>
-                        <div class="file-upload-area" id="dropZone">
-                            <i class="ph ph-image"></i>
-                            <p>Drag & drop or click to upload</p>
-                            <input type="file" id="reportImage" accept="image/*" hidden>
-                            <div id="imagePreview" class="image-preview"></div>
-                        </div>
+                <div class="form-group">
+                    <label class="form-label">Title</label>
+                    <input type="text" id="reportTitle" class="form-input" required placeholder="e.g., Broken Street Light">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Category</label>
+                    <select id="reportCategory" class="form-select" required>
+                        <option value="">Select Category</option>
+                        <option value="Roads">Roads & Potholes</option>
+                        <option value="Garbage">Garbage Collection</option>
+                        <option value="Drainage">Drainage & Sewage</option>
+                        <option value="Flooding">Flooding</option>
+                        <option value="Street Lights">Street Lights</option>
+                        <option value="Public Safety">Public Safety</option>
+                        <option value="Infrastructure">Infrastructure</option>
+                        <option value="Others">Others</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Severity</label>
+                    <select id="reportSeverity" class="form-select" required>
+                        <option value="Low">Low</option>
+                        <option value="Medium">Medium</option>
+                        <option value="High">High</option>
+                        <option value="Emergency">Emergency</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Description</label>
+                    <textarea id="reportDescription" class="form-textarea" required placeholder="Describe the issue in detail..."></textarea>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Location</label>
+                    <div class="flex gap-2">
+                        <input type="text" id="reportLocation" class="form-input" required placeholder="Enter location manually">
+                        <button type="button" class="btn btn-outline" onclick="detectLocation()" title="Use GPS"><i class="ph ph-crosshair"></i></button>
                     </div>
                 </div>
-
-                <div class="modal-footer">
-                    <button type="button" class="btn-secondary close-modal">Cancel</button>
-                    <button type="submit" class="btn-primary" id="submitReportBtn">
-                        <span>Submit Report</span>
-                        <i class="ph ph-spinner loading-spinner" style="display:none"></i>
-                    </button>
+                <div class="form-group">
+                    <label class="form-label">Photo Evidence</label>
+                    <div class="image-upload-area" onclick="document.getElementById('reportImage').click()">
+                        <i class="ph ph-camera" style="font-size: 2rem; color: var(--text-muted);"></i>
+                        <p>Click to upload photo</p>
+                        <input type="file" id="reportImage" accept="image/*" hidden onchange="previewImage(this)">
+                        <img id="imagePreview" class="image-preview">
+                    </div>
+                </div>
+                <div class="flex justify-between mt-4">
+                    <button type="button" class="btn btn-outline" onclick="closeReportModal()">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Submit Report</button>
                 </div>
             </form>
         </div>
@@ -241,8 +185,8 @@
 
     <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="js/utils.js"></script>
     <script src="js/supabase.js"></script>
+    <script src="js/utils.js"></script>
     <script src="js/auth.js"></script>
     <script src="js/reports.js"></script>
     <script src="js/dashboard.js"></script>
