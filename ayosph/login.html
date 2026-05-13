@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - AyosPH</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/auth.css">
+</head>
+<body class="auth-page">
+    <div class="auth-container">
+        <div class="auth-left">
+            <a href="index.html" class="auth-logo">
+                <i class="ph ph-house-line"></i>
+                <span>AyosPH</span>
+            </a>
+
+            <div class="auth-form">
+                <h1>Welcome back</h1>
+                <p class="subtitle">Sign in to your account to continue</p>
+
+                <form id="loginForm">
+                    <div class="form-group">
+                        <label for="email" class="form-label">Email Address</label>
+                        <input 
+                            type="email" 
+                            id="email" 
+                            class="form-input" 
+                            placeholder="you@example.com"
+                            required
+                        >
+                    </div>
+
+                    <div class="form-group">
+                        <label for="password" class="form-label">Password</label>
+                        <div class="input-icon-wrapper">
+                            <input 
+                                type="password" 
+                                id="password" 
+                                class="form-input" 
+                                placeholder="Enter your password"
+                                required
+                            >
+                            <button type="button" id="togglePassword" aria-label="Toggle password visibility">
+                                <i class="ph ph-eye"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="form-group checkbox-group">
+                        <input type="checkbox" id="remember">
+                        <label for="remember">Remember me for 30 days</label>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary btn-full" id="loginBtn">
+                        Sign In
+                    </button>
+                </form>
+
+                <div class="form-footer">
+                    <p>Don't have an account? <a href="register.html">Sign up</a></p>
+                    <p class="mt-2"><a href="index.html">← Back to home</a></p>
+                </div>
+            </div>
+        </div>
+
+        <div class="auth-right">
+            <div class="auth-content">
+                <h2>Build Better Communities</h2>
+                <p>Join AyosPH and be part of the solution. Report issues, track progress, and help create a better barangay for everyone.</p>
+
+                <div class="auth-features">
+                    <div class="auth-feature">
+                        <i class="ph ph-check-circle"></i>
+                        <span>Quick Reporting</span>
+                    </div>
+                    <div class="auth-feature">
+                        <i class="ph ph-clock"></i>
+                        <span>Real-time Updates</span>
+                    </div>
+                    <div class="auth-feature">
+                        <i class="ph ph-shield-check"></i>
+                        <span>Secure & Private</span>
+                    </div>
+                    <div class="auth-feature">
+                        <i class="ph ph-users"></i>
+                        <span>Community Driven</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Container -->
+    <div id="toast-container"></div>
+
+    <script src="js/supabase.js"></script>
+    <script src="js/utils.js"></script>
+    <script src="js/auth.js"></script>
+    <script>
+        // Toggle password visibility
+        document.getElementById('togglePassword')?.addEventListener('click', function() {
+            const passwordInput = document.getElementById('password');
+            const icon = this.querySelector('i');
+            
+            if (passwordInput.type === 'password') {
+                passwordInput.type = 'text';
+                icon.classList.replace('ph-eye', 'ph-eye-slash');
+            } else {
+                passwordInput.type = 'password';
+                icon.classList.replace('ph-eye-slash', 'ph-eye');
+            }
+        });
+
+        // Handle login form submission
+        document.getElementById('loginForm')?.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const email = document.getElementById('email').value.trim();
+            const password = document.getElementById('password').value;
+            const remember = document.getElementById('remember').checked;
+            const loginBtn = document.getElementById('loginBtn');
+
+            // Validate inputs
+            if (!email || !password) {
+                showToast('Please fill in all fields', 'error');
+                return;
+            }
+
+            // Show loading state
+            loginBtn.classList.add('btn-loading');
+            loginBtn.disabled = true;
+
+            try {
+                await handleLogin(email, password, remember);
+            } catch (error) {
+                console.error('Login error:', error);
+                showToast(error.message || 'Failed to sign in. Please check your credentials.', 'error');
+                loginBtn.classList.remove('btn-loading');
+                loginBtn.disabled = false;
+            }
+        });
+
+        // Check if already logged in
+        checkAuthState(true);
+    </script>
+</body>
+</html>

@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - AyosPH</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/dashboard.css">
+    <link rel="stylesheet" href="css/admin.css">
+</head>
+<body class="dashboard-page">
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <a href="index.html" class="sidebar-logo">
+                <i class="ph ph-house-line"></i>
+                <span>AyosPH</span>
+            </a>
+        </div>
+        
+        <nav class="sidebar-menu">
+            <a href="admin.html" class="menu-item active">
+                <i class="ph ph-squares-four"></i>
+                <span>Dashboard</span>
+            </a>
+            <a href="#" class="menu-item" data-view="all-reports">
+                <i class="ph ph-files"></i>
+                <span>All Reports</span>
+            </a>
+            <a href="#" class="menu-item" data-view="analytics">
+                <i class="ph ph-chart-line-up"></i>
+                <span>Analytics</span>
+            </a>
+            <a href="#" class="menu-item" data-view="users">
+                <i class="ph ph-users"></i>
+                <span>Users</span>
+            </a>
+        </nav>
+
+        <div class="sidebar-footer">
+            <div class="user-profile" id="userProfile">
+                <div class="user-avatar" id="userAvatar">AD</div>
+                <div class="user-info">
+                    <div class="user-name" id="userName">Loading...</div>
+                    <div class="user-role" id="userRole">Admin</div>
+                </div>
+                <i class="ph ph-sign-out" id="logoutBtn" style="color: var(--gray-400);"></i>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <!-- Top Bar -->
+        <header class="top-bar">
+            <div class="top-bar-left">
+                <button class="menu-toggle" id="menuToggle">
+                    <i class="ph ph-list"></i>
+                </button>
+                <h1 class="page-title" id="pageTitle">Admin Dashboard</h1>
+            </div>
+            <div class="top-bar-right">
+                <button class="notification-btn" id="notificationBtn">
+                    <i class="ph ph-bell"></i>
+                    <span class="notification-badge hidden" id="notificationBadge"></span>
+                </button>
+            </div>
+        </header>
+
+        <!-- Dashboard Content -->
+        <div class="dashboard-content">
+            <!-- Stats Grid -->
+            <div class="stats-grid admin-stats-grid">
+                <div class="stat-card">
+                    <div class="stat-card-header">
+                        <div>
+                            <div class="stat-card-value" id="totalReports">0</div>
+                            <div class="stat-card-label">Total Reports</div>
+                        </div>
+                        <div class="stat-card-icon primary">
+                            <i class="ph ph-file-text"></i>
+                        </div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-card-header">
+                        <div>
+                            <div class="stat-card-value" id="pendingReports">0</div>
+                            <div class="stat-card-label">Pending</div>
+                        </div>
+                        <div class="stat-card-icon warning">
+                            <i class="ph ph-clock"></i>
+                        </div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-card-header">
+                        <div>
+                            <div class="stat-card-value" id="inProgressReports">0</div>
+                            <div class="stat-card-label">In Progress</div>
+                        </div>
+                        <div class="stat-card-icon info">
+                            <i class="ph ph-spinner"></i>
+                        </div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-card-header">
+                        <div>
+                            <div class="stat-card-value" id="fixedReports">0</div>
+                            <div class="stat-card-label">Resolved</div>
+                        </div>
+                        <div class="stat-card-icon success">
+                            <i class="ph ph-check-circle"></i>
+                        </div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-card-header">
+                        <div>
+                            <div class="stat-card-value" id="emergencyReports">0</div>
+                            <div class="stat-card-label">Emergency</div>
+                        </div>
+                        <div class="stat-card-icon danger">
+                            <i class="ph ph-warning"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Analytics Row -->
+            <div class="analytics-row">
+                <div class="analytics-card">
+                    <div class="analytics-card-header">
+                        <div>
+                            <div class="analytics-card-title">Reports by Category</div>
+                        </div>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="categoryChart"></canvas>
+                    </div>
+                </div>
+                <div class="analytics-card">
+                    <div class="analytics-card-header">
+                        <div>
+                            <div class="analytics-card-title">Monthly Reports</div>
+                        </div>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="monthlyChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recent Reports -->
+            <div class="content-card">
+                <div class="card-header">
+                    <h2 class="card-title">Recent Reports</h2>
+                    <div class="card-actions">
+                        <input type="text" class="form-input search-input" id="searchInput" placeholder="Search reports..." style="max-width: 250px;">
+                        <select class="form-select filter-select" id="statusFilter">
+                            <option value="">All Statuses</option>
+                            <option value="Pending">Pending</option>
+                            <option value="Under Review">Under Review</option>
+                            <option value="In Progress">In Progress</option>
+                            <option value="Fixed">Fixed</option>
+                            <option value="Rejected">Rejected</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <table class="admin-table">
+                        <thead>
+                            <tr>
+                                <th>Title</th>
+                                <th>Category</th>
+                                <th>Severity</th>
+                                <th>Status</th>
+                                <th>Reporter</th>
+                                <th>Date</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="reportsTableBody">
+                            <tr>
+                                <td colspan="7" style="text-align: center; padding: 3rem;">
+                                    <i class="ph ph-spinner" style="font-size: 2rem; color: var(--gray-400); animation: spin 1s linear infinite;"></i>
+                                    <p style="color: var(--gray-500); margin-top: 1rem;">Loading reports...</p>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Report Detail Modal -->
+    <div class="modal-overlay" id="reportDetailModal">
+        <div class="modal" style="max-width: 800px;">
+            <div class="modal-header">
+                <h3 class="modal-title">Report Details</h3>
+                <button class="modal-close" id="closeReportDetailModal">
+                    <i class="ph ph-x"></i>
+                </button>
+            </div>
+            <div class="modal-body" id="reportDetailContent">
+                <!-- Report details will be loaded here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Container -->
+    <div id="toast-container"></div>
+
+    <!-- Supabase JS -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="js/supabase.js"></script>
+    <script src="js/utils.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/reports.js"></script>
+    <script src="js/notifications.js"></script>
+    <script src="js/admin.js"></script>
+</body>
+</html>
